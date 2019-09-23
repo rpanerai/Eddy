@@ -21,11 +21,12 @@ class ItemModel(QAbstractItemModel):
 
     _FORMAT_TYPE = {
         "A": "Article",
-        "P": "Conference Proceedings",
-        "T": "Thesis",
         "B": "Book",
         "C": "Book Chapter",
-        "N": "Note"
+        "N": "Note",
+        "P": "Conference Proceedings",
+        "R": "Report",
+        "T": "Thesis"
     }
 
     _FORMAT_FUNCTIONS = {

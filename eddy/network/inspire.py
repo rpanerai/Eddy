@@ -133,12 +133,14 @@ class InspireFetcher(QObject):
 
     _TYPES = {
         "article": "A",
-        "conference paper": "P",
-        "proceedings": "P",
-        "thesis": "T",
         "book": "B",
         "book chapter": "C",
-        "note": "N"
+        "note": "N",
+        "conference paper": "P",
+        "proceedings": "P",
+        "report": "R",
+        "activity report": "R",
+        "thesis": "T"
     }
 
     @staticmethod
