@@ -153,6 +153,9 @@ class TableModel(QAbstractItemModel):
     def GetArXivId(self, row):
         return self._table.GetRecord(self.GetId(row), ("arxiv_id",))["arxiv_id"]
 
+    def GetInspireId(self, row):
+        return self._table.GetRecord(self.GetId(row), ("inspire_id",))["inspire_id"]
+
     def _CreateSortFilterMap(self):
         ids = self._table.GetTable(
             ("id",),
@@ -176,6 +179,7 @@ class TableModel(QAbstractItemModel):
 
 class TableView(QTreeView):
     ItemSelected = Signal(int)
+    SearchRequested = Signal(str)
 
     _PERSISTENT_SELECTION_MODE = False
 
@@ -256,13 +260,25 @@ class TableView(QTreeView):
 
         menu = QMenu()
         action_arxiv_pdf = menu.addAction("Open arXiv PDF")
+        action_references = menu.addAction("Find references")
+        action_citations = menu.addAction("Find citations")
 
         arxiv_id = self.model().GetArXivId(index.row())
         if arxiv_id == "":
             action_arxiv_pdf.setEnabled(False)
         else:
-            url = "https://arxiv.org/pdf/" + arxiv_id + ".pdf"
-            action_arxiv_pdf.triggered.connect(partial(self._OpenPDF, url))
+            pdf_url = "https://arxiv.org/pdf/" + arxiv_id + ".pdf"
+            action_arxiv_pdf.triggered.connect(partial(self._OpenPDF, pdf_url))
+
+        inspire_id = self.model().GetInspireId(index.row())
+        if inspire_id == "":
+            action_references.setEnabled(False)
+            action_citations.setEnabled(False)
+        else:
+            ref_string = "citedby:recid:" + str(inspire_id)
+            action_references.triggered.connect(partial(self.SearchRequested.emit, ref_string))
+            cit_string = "refersto:recid:" + str(inspire_id)
+            action_citations.triggered.connect(partial(self.SearchRequested.emit, cit_string))
 
         menu.exec_(self.viewport().mapToGlobal(position))
 

@@ -12,6 +12,8 @@ from eddy.gui.searchfilter import SearchBar, FilterBar
 
 
 class TabContent(QWidget):
+    SearchRequested = Signal(str)
+
     def __init__(self, index, parent=None):
         super(TabContent, self).__init__(parent)
 
@@ -29,6 +31,7 @@ class TabContent(QWidget):
 
         self.table_view = TableView()
         self.table_view.setModel(table_model)
+        self.table_view.SearchRequested.connect(self.SearchRequested.emit)
 
         item_model = ItemModel(self)
         item_model.SetTable(self.database_table)
@@ -121,6 +124,7 @@ class TabSystem(QTabWidget):
     def AddTab(self, search_string=None):
         self.index = self.index + 1
         new_tab = TabContent(self.index)
+        new_tab.SearchRequested.connect(self.AddTab)
         self.addTab(new_tab, "INSPIRE")
         self.setCurrentWidget(new_tab)
 
