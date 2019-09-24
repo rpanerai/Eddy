@@ -77,7 +77,7 @@ class TabContent(QWidget):
         self.status_bar.showMessage("Fetching from Inspire…")
         self.progress_bar.reset()
         self.progress_bar.show()
-        self.search_bar.EnableStopButton()
+        self.search_bar.SetStopEnabled(True)
 
     def _HandleFetchingProgress(self, bytes_received, bytes_total):
         self.progress_bar.setMaximum(bytes_total)
@@ -88,12 +88,12 @@ class TabContent(QWidget):
             "Fetching completed: " + str(records_number) + " records found."
         )
         self.progress_bar.hide()
-        self.search_bar.DisableStopButton()
+        self.search_bar.SetStopEnabled(False)
 
     def _HandleFetchingStopped(self):
         self.status_bar.showMessage("Fetching stopped.")
         self.progress_bar.hide()
-        self.search_bar.DisableStopButton()
+        self.search_bar.SetStopEnabled(False)
 
 
 class TabSystem(QTabWidget):
