@@ -50,6 +50,9 @@ class TabContent(QWidget):
         self.fetcher.FetchingFinished.connect(self._HandleFetchingCompleted)
         self.fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
 
+    def RunSearch(self, search_string):
+        self.search_bar.RunSearch(search_string)
+
     def _SetupUI(self):
         main_layout = QVBoxLayout()
         splitter = QSplitter()
@@ -115,11 +118,14 @@ class TabSystem(QTabWidget):
         if self.count() == 0:
             self.LastTabClosed.emit()
 
-    def AddTab(self):
+    def AddTab(self, search_string=None):
         self.index = self.index + 1
         new_tab = TabContent(self.index)
         self.addTab(new_tab, "INSPIRE")
         self.setCurrentWidget(new_tab)
+
+        if search_string is not None:
+            new_tab.RunSearch(search_string)
 
     def mouseDoubleClickEvent(self, event):
         super(TabSystem, self).mouseDoubleClickEvent(event)

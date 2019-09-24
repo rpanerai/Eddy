@@ -1,4 +1,5 @@
 import sys
+from functools import partial
 
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication, QMainWindow, QAction
@@ -27,7 +28,7 @@ class MainWindow(QMainWindow):
 
         new_tab_action = QAction(QIcon.fromTheme("tab-new"), "New &Tab", self)
         new_tab_action.setShortcut("Ctrl+T")
-        new_tab_action.triggered.connect(main_widget.AddTab)
+        new_tab_action.triggered.connect(partial(main_widget.AddTab, None))
         file_menu.addAction(new_tab_action)
 
         exit_action = QAction(QIcon.fromTheme("application-exit"), "&Quit", self)

@@ -67,6 +67,11 @@ class SearchBar(QWidget):
     def SetStopEnabled(self, bool_):
         self._kill_button.setEnabled(bool_)
 
+    def RunSearch(self, search_string):
+        self._query_edit.setText(search_string)
+        self._ac_cap.SetEnabled(False)
+        self._HandleReturnPressed()
+
     def _HandleReturnPressed(self):
         search_string = " ".join(self._query_edit.text().split())
         if self._ac_cap.IsChecked():
