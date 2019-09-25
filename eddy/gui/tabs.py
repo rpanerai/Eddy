@@ -13,6 +13,7 @@ from eddy.gui.searchfilter import SearchBar, FilterBar
 
 class TabContent(QWidget):
     SearchRequested = Signal(str)
+    SearchStarted = Signal(str)
 
     def __init__(self, index, parent=None):
         super(TabContent, self).__init__(parent)
@@ -78,6 +79,7 @@ class TabContent(QWidget):
         self._KillSearch()
         self._database_table.Clear()
         self._fetcher.Fetch(query, 50)
+        self.SearchStarted.emit(query)
 
     def _HandleFetchingStarted(self):
         self._status_bar.showMessage("Fetching from Inspire…")
@@ -124,12 +126,19 @@ class TabSystem(QTabWidget):
     def AddTab(self, search_string=None):
         self.index = self.index + 1
         new_tab = TabContent(self.index)
+        self.addTab(new_tab, "New Tab")
+
         new_tab.SearchRequested.connect(self.AddTab)
-        self.addTab(new_tab, "INSPIRE")
+        new_tab.SearchStarted.connect(self.RenameTab)
+
         self.setCurrentWidget(new_tab)
 
         if search_string is not None:
             new_tab.RunSearch(search_string)
+
+    def RenameTab(self, query):
+        index = self.indexOf(self.sender())
+        self.setTabText(index, query)
 
     def mouseDoubleClickEvent(self, event):
         super(TabSystem, self).mouseDoubleClickEvent(event)
