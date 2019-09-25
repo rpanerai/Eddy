@@ -17,89 +17,89 @@ class TabContent(QWidget):
     def __init__(self, index, parent=None):
         super(TabContent, self).__init__(parent)
 
-        self.search_bar = SearchBar()
-        self.search_bar.SearchRequested.connect(self._Search)
-        self.search_bar.StopPressed.connect(self._KillSearch)
+        self._search_bar = SearchBar()
+        self._search_bar.SearchRequested.connect(self._Search)
+        self._search_bar.StopPressed.connect(self._KillSearch)
 
-        self.database_table = Table(DATABASE_IN_MEMORY, "tab" + str(index))
+        self._database_table = Table(DATABASE_IN_MEMORY, "tab" + str(index))
 
         table_model = TableModel(self)
-        table_model.SetTable(self.database_table)
+        table_model.SetTable(self._database_table)
 
-        self.filter_bar = FilterBar()
-        self.filter_bar.TextChanged.connect(table_model.Filter)
+        self._filter_bar = FilterBar()
+        self._filter_bar.TextChanged.connect(table_model.Filter)
 
-        self.table_view = TableView()
-        self.table_view.setModel(table_model)
-        self.table_view.SearchRequested.connect(self.SearchRequested.emit)
+        self._table_view = TableView()
+        self._table_view.setModel(table_model)
+        self._table_view.SearchRequested.connect(self.SearchRequested.emit)
 
         item_model = ItemModel(self)
-        item_model.SetTable(self.database_table)
-        self.table_view.ItemSelected.connect(item_model.DisplayRecord)
-        self.item_view = ItemView()
-        self.item_view.setModel(item_model)
+        item_model.SetTable(self._database_table)
+        self._table_view.ItemSelected.connect(item_model.DisplayRecord)
+        self._item_view = ItemView()
+        self._item_view.setModel(item_model)
 
-        self.status_bar = QStatusBar()
-        self.progress_bar = QProgressBar()
-        self.progress_bar.hide()
-        self.status_bar.addPermanentWidget(self.progress_bar)
+        self._status_bar = QStatusBar()
+        self._progress_bar = QProgressBar()
+        self._progress_bar.hide()
+        self._status_bar.addPermanentWidget(self._progress_bar)
 
         self._SetupUI()
 
-        self.fetcher = InspireFetcher()
-        self.fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
-        self.fetcher.BatchProgress.connect(self._HandleFetchingProgress)
-        self.fetcher.BatchReady.connect(self.database_table.AddData)
-        self.fetcher.FetchingFinished.connect(self._HandleFetchingCompleted)
-        self.fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
+        self._fetcher = InspireFetcher()
+        self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
+        self._fetcher.BatchProgress.connect(self._HandleFetchingProgress)
+        self._fetcher.BatchReady.connect(self._database_table.AddData)
+        self._fetcher.FetchingFinished.connect(self._HandleFetchingCompleted)
+        self._fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
 
     def RunSearch(self, search_string):
-        self.search_bar.RunSearch(search_string)
+        self._search_bar.RunSearch(search_string)
 
     def _SetupUI(self):
         main_layout = QVBoxLayout()
         splitter = QSplitter()
         splitter.setOrientation(Qt.Horizontal)
-        splitter.addWidget(self.table_view)
-        splitter.addWidget(self.item_view)
+        splitter.addWidget(self._table_view)
+        splitter.addWidget(self._item_view)
         splitter.setStretchFactor(0, 2)
         splitter.setStretchFactor(1, 1)
         splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        main_layout.addWidget(self.search_bar)
-        main_layout.addWidget(self.filter_bar)
+        main_layout.addWidget(self._search_bar)
+        main_layout.addWidget(self._filter_bar)
         main_layout.addWidget(splitter)
-        main_layout.addWidget(self.status_bar)
+        main_layout.addWidget(self._status_bar)
         self.setLayout(main_layout)
 
     def _KillSearch(self):
-        self.fetcher.Stop()
+        self._fetcher.Stop()
 
     def _Search(self, query):
         self._KillSearch()
-        self.database_table.Clear()
-        self.fetcher.Fetch(query, 50)
+        self._database_table.Clear()
+        self._fetcher.Fetch(query, 50)
 
     def _HandleFetchingStarted(self):
-        self.status_bar.showMessage("Fetching from Inspire…")
-        self.progress_bar.reset()
-        self.progress_bar.show()
-        self.search_bar.SetStopEnabled(True)
+        self._status_bar.showMessage("Fetching from Inspire…")
+        self._progress_bar.reset()
+        self._progress_bar.show()
+        self._search_bar.SetStopEnabled(True)
 
     def _HandleFetchingProgress(self, bytes_received, bytes_total):
-        self.progress_bar.setMaximum(bytes_total)
-        self.progress_bar.setValue(bytes_received)
+        self._progress_bar.setMaximum(bytes_total)
+        self._progress_bar.setValue(bytes_received)
 
     def _HandleFetchingCompleted(self, records_number):
-        self.status_bar.showMessage(
+        self._status_bar.showMessage(
             "Fetching completed: " + str(records_number) + " records found."
         )
-        self.progress_bar.hide()
-        self.search_bar.SetStopEnabled(False)
+        self._progress_bar.hide()
+        self._search_bar.SetStopEnabled(False)
 
     def _HandleFetchingStopped(self):
-        self.status_bar.showMessage("Fetching stopped.")
-        self.progress_bar.hide()
-        self.search_bar.SetStopEnabled(False)
+        self._status_bar.showMessage("Fetching stopped.")
+        self._progress_bar.hide()
+        self._search_bar.SetStopEnabled(False)
 
 
 class TabSystem(QTabWidget):
