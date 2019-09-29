@@ -9,14 +9,15 @@ class ACCapWidget(QWidget):
 
         self._check = QCheckBox()
         self._check.setText("AC ≤")
-        # self._check.setStyleSheet("QCheckBox:checked{color: black;} QCheckBox:unchecked{color: grey;}")
+        # self._check.setStyleSheet(
+        #     "QCheckBox:checked{color: black;} QCheckBox:unchecked{color: grey;}"
+        # )
 
         self._spin = QSpinBox()
         self._spin.setRange(1, 99)
         self._spin.setValue(10)
+        self._spin.setEnabled(False)
         self._check.toggled.connect(self._spin.setEnabled)
-
-        self.SetEnabled(False)
 
         layout = QHBoxLayout()
         layout.addWidget(self._check)
@@ -25,9 +26,8 @@ class ACCapWidget(QWidget):
 
         self.setLayout(layout)
 
-    def SetEnabled(self, bool_):
-        self._check.setChecked(bool_)
-        self._spin.setEnabled(bool_)
+    # def SetEnabled(self, bool_):
+    #     self._check.setChecked(bool_)
 
     def IsChecked(self):
         return self._check.isChecked()
@@ -69,7 +69,6 @@ class SearchBar(QWidget):
 
     def RunSearch(self, search_string):
         self._query_edit.setText(search_string)
-        self._ac_cap.SetEnabled(False)
         self._HandleReturnPressed()
 
     def _HandleReturnPressed(self):
