@@ -1,81 +1,31 @@
-import json
 import urllib.parse
+import json
 
-from PySide2.QtCore import QObject, Signal, QUrl
-from PySide2.QtNetwork import QNetworkAccessManager, QNetworkRequest, QNetworkReply
-
-
-NETWORK_MANAGER = QNetworkAccessManager()
+from PySide2.QtCore import QUrl
+from PySide2.QtNetwork import QNetworkRequest
 
 
-class InspireFetcher(QObject):
-    FetchingStarted = Signal()
-    BatchProgress = Signal(int, int)
-    BatchReady = Signal(dict)
-    FetchingFinished = Signal(int)
-    FetchingStopped = Signal()
-
-    _BASE_URL = "https://labs.inspirehep.net/api/literature?sort=mostrecent"
-
-    def __init__(self, parent=None):
-        super(InspireFetcher, self).__init__(parent)
-
-        self._manager = NETWORK_MANAGER
-
-        self._url = None
-        self._batch_size = None
-        self._page = None
-        self._reply = None
-
-    def Fetch(self, search_string, batch_size):
-        self._batch_size = batch_size
-        self._url = (
-            InspireFetcher._BASE_URL
+class InspirePlugin():
+    @staticmethod
+    def CreateRequest(search_string, batch_size, page):
+        url = (
+            "https://labs.inspirehep.net/api/literature?sort=mostrecent"
             + "&q=" + urllib.parse.quote(search_string)
-            + "&size=" + str(self._batch_size)
+            + "&size=" + str(batch_size)
+            + "&page=" + str(page)
         )
-
-        self._page = 1
-
-        self.FetchingStarted.emit()
-        self._FetchBatch()
-
-    def _FetchBatch(self):
-        request = QNetworkRequest(QUrl(self._url + "&page=" + str(self._page)))
+        request = QNetworkRequest(QUrl(url))
         request.setRawHeader(b"Accept", b"application/json")
-        self._reply = self._manager.get(request)
-        self._reply.downloadProgress.connect(self._DownloadProgress)
-        self._reply.finished.connect(self._HandleBatch)
 
-    def _HandleBatch(self):
-        if self._reply.error() == QNetworkReply.NoError:
-            reply_string = str(self._reply.readAll(), "utf-8")
-            self._reply.deleteLater()
+        return request
 
-            (data, total) = self._DecodeBatch(json.loads(reply_string))
-
-            records_found = len(data)
-            if records_found > 0:
-                self.BatchReady.emit(data)
-
-            if (self._batch_size is not None) and (self._page * self._batch_size < total):
-                self._page = self._page + 1
-                self._FetchBatch()
-            else:
-                self._reply = None
-                self.FetchingFinished.emit(total)
-        else:
-            # Here do something to notify the error. Possibly emit a signal or raise an exception.
-            print(self._reply.error())
-            self._reply.deleteLater()
-            self._reply = None
-
-    def _DecodeBatch(self, raw_data):
-        base_id = (self._page - 1) * self._batch_size
+    @staticmethod
+    def DecodeBatch(reply_string, base_id):
+        raw_data = json.loads(reply_string)
         data = [{
             "id": i + base_id,
             "type": (
-                InspireFetcher._TYPES.get(d["metadata"]["document_type"][0], "")
+                InspirePlugin._TYPES.get(d["metadata"]["document_type"][0], "")
                 if "document_type" in d["metadata"]
                 else ""
             ),
@@ -92,8 +42,8 @@ class InspireFetcher(QObject):
                 else ""
             ),
             "citations": d["metadata"]["citation_count"],
-            "journal" : (
-                InspireFetcher._DecodeJournal(
+            "journal": (
+                InspirePlugin._DecodeJournal(
                     d["metadata"]["publication_info"][0]
                 )
                 if "publication_info" in d["metadata"]
@@ -119,17 +69,6 @@ class InspireFetcher(QObject):
         total = raw_data["hits"]["total"]
 
         return (data, total)
-
-    def _DownloadProgress(self, bytes_received, bytes_total):
-        self.BatchProgress.emit(bytes_received, bytes_total)
-
-    def Stop(self):
-        if self._reply is not None:
-            self._reply.finished.disconnect()
-            self._reply.abort()
-            self._reply.deleteLater()
-            self._reply = None
-            self.FetchingStopped.emit()
 
     _TYPES = {
         "article": "A",

@@ -4,7 +4,8 @@ from PySide2.QtWidgets import (
     QWidget, QVBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar, QSizePolicy
 )
 
-from eddy.network.inspire import InspireFetcher
+from eddy.network.fetcher import Fetcher
+from eddy.network.inspire import InspirePlugin
 from eddy.data.database import DATABASE_IN_MEMORY, Table
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemModel, ItemView
@@ -47,7 +48,7 @@ class TabContent(QWidget):
 
         self._SetupUI()
 
-        self._fetcher = InspireFetcher()
+        self._fetcher = Fetcher()
         self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
         self._fetcher.BatchProgress.connect(self._HandleFetchingProgress)
         self._fetcher.BatchReady.connect(self._database_table.AddData)
@@ -78,7 +79,7 @@ class TabContent(QWidget):
     def _Search(self, query):
         self._KillSearch()
         self._database_table.Clear()
-        self._fetcher.Fetch(query, 50)
+        self._fetcher.Fetch(InspirePlugin, query, 50)
         self.SearchStarted.emit(query)
 
     def _HandleFetchingStarted(self):
