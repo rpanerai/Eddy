@@ -17,7 +17,7 @@ class ItemModel(QAbstractItemModel):
 
     _KEYS = tuple(_FIELDS.keys())
 
-    _HEADERS = tuple(_FIELDS.values()) 
+    _HEADERS = tuple(_FIELDS.values())
 
     _FORMAT_TYPE = {
         "A": "Article",
