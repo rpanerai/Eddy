@@ -1,20 +1,27 @@
 from PySide2.QtCore import Signal
-from PySide2.QtGui import Qt
+from PySide2.QtGui import Qt, QIcon
 from PySide2.QtWidgets import (
     QWidget, QVBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar, QSizePolicy
 )
 
 from eddy.network.fetcher import Fetcher
 from eddy.network.inspire import InspirePlugin
+from eddy.network.arxiv import ArXivPlugin
 from eddy.data.database import DATABASE_IN_MEMORY, Table
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemModel, ItemView
 from eddy.gui.searchfilter import SearchBar, FilterBar
+from eddy.icons import icons
 
 
 class TabContent(QWidget):
     SearchRequested = Signal(str)
-    SearchStarted = Signal(str)
+    SearchStarted = Signal(str, str)
+
+    _PLUGINS = {
+        "INSPIRE": InspirePlugin,
+        "arXiv": ArXivPlugin
+    }
 
     def __init__(self, index, parent=None):
         super(TabContent, self).__init__(parent)
@@ -76,11 +83,11 @@ class TabContent(QWidget):
     def _KillSearch(self):
         self._fetcher.Stop()
 
-    def _Search(self, query):
+    def _Search(self, source, query):
         self._KillSearch()
         self._database_table.Clear()
-        self._fetcher.Fetch(InspirePlugin, query, 50)
-        self.SearchStarted.emit(query)
+        self._fetcher.Fetch(TabContent._PLUGINS[source], query, 50)
+        self.SearchStarted.emit(source, query)
 
     def _HandleFetchingStarted(self):
         self._status_bar.showMessage("Fetching from Inspire…")
@@ -107,6 +114,11 @@ class TabContent(QWidget):
 
 class TabSystem(QTabWidget):
     LastTabClosed = Signal()
+
+    _ICONS = {
+        "INSPIRE": icons.INSPIRE,
+        "arXiv": icons.ARXIV
+    }
 
     def __init__(self, parent=None):
         super(TabSystem, self).__init__(parent)
@@ -137,8 +149,9 @@ class TabSystem(QTabWidget):
         if search_string is not None:
             new_tab.RunSearch(search_string)
 
-    def RenameTab(self, query):
+    def RenameTab(self, source, query):
         index = self.indexOf(self.sender())
+        self.setTabIcon(index, QIcon(TabSystem._ICONS[source]))
         self.setTabText(index, query)
 
     def mouseDoubleClickEvent(self, event):
