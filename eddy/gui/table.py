@@ -2,6 +2,7 @@ import os
 from functools import partial
 
 from PySide2.QtCore import Qt, Signal, QAbstractItemModel, QItemSelectionModel, QModelIndex
+from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QTreeView, QHeaderView, QMenu
 
 
@@ -259,9 +260,9 @@ class TableView(QTreeView):
             return
 
         menu = QMenu()
-        action_arxiv_pdf = menu.addAction("Open arXiv PDF")
-        action_references = menu.addAction("Find references")
-        action_citations = menu.addAction("Find citations")
+        action_arxiv_pdf = menu.addAction(QIcon.fromTheme("viewpdf"), "Open arXiv PDF")
+        action_references = menu.addAction(QIcon.fromTheme("system-search"), "Find references")
+        action_citations = menu.addAction(QIcon.fromTheme("system-search"), "Find citations")
 
         arxiv_id = self.model().GetArXivId(index.row())
         if arxiv_id == "":
