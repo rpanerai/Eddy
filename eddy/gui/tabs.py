@@ -61,6 +61,7 @@ class TabContent(QWidget):
         self._fetcher.BatchReady.connect(self._database_table.AddData)
         self._fetcher.FetchingFinished.connect(self._HandleFetchingCompleted)
         self._fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
+        self._fetcher.FetchingError.connect(self._HandleFetchingError)
 
     def RunSearch(self, search_string):
         self._search_bar.RunSearch(search_string)
@@ -108,6 +109,11 @@ class TabContent(QWidget):
 
     def _HandleFetchingStopped(self):
         self._status_bar.showMessage("Fetching stopped.")
+        self._progress_bar.hide()
+        self._search_bar.SetStopEnabled(False)
+
+    def _HandleFetchingError(self, error):
+        self._status_bar.showMessage("Fetching error: " + error + ".")
         self._progress_bar.hide()
         self._search_bar.SetStopEnabled(False)
 

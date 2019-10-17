@@ -5,12 +5,17 @@ from PySide2.QtNetwork import QNetworkAccessManager, QNetworkReply
 NETWORK_MANAGER = QNetworkAccessManager()
 
 
+def ParseNetworkError(error):
+    return str(error).split(".")[-1]
+
+
 class Fetcher(QObject):
     FetchingStarted = Signal()
     BatchProgress = Signal(int, int)
     BatchReady = Signal(dict)
     FetchingFinished = Signal(int)
     FetchingStopped = Signal()
+    FetchingError = Signal(str)
 
     def __init__(self, parent=None):
         super(Fetcher, self).__init__(parent)
@@ -68,10 +73,10 @@ class Fetcher(QObject):
                 self._reply = None
                 self.FetchingFinished.emit(total)
         else:
-            # Here do something to notify the error. Possibly emit a signal or raise an exception.
-            print(self._reply.error())
+            error = ParseNetworkError(self._reply.error())
             self._reply.deleteLater()
             self._reply = None
+            self.FetchingError.emit(error)
 
     def _DownloadProgress(self, bytes_received, bytes_total):
         self.BatchProgress.emit(bytes_received, bytes_total)
