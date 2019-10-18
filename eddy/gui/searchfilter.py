@@ -105,6 +105,10 @@ class SearchBar(QWidget):
     def _HandleReturnPressed(self):
         source = self._source_combo.currentText()
         search_string = " ".join(self._query_edit.text().split())
+
+        if search_string == "":
+            return
+
         if self._ac_cap.IsChecked():
             search_string = search_string + " and ac <= " + str(self._ac_cap.Value())
         self.SearchRequested.emit(source, search_string)
