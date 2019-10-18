@@ -83,6 +83,7 @@ class TabContent(QWidget):
 
     def _Search(self, source, query):
         self._database_table.Clear()
+        self._filter_bar.clear()
         self.SearchStarted.emit(source, query)
         self._fetcher.Fetch(TabContent._PLUGINS[source], query, 50)
 
