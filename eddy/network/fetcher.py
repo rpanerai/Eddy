@@ -30,8 +30,9 @@ class Fetcher(QObject):
         self._reply = None
 
     def Fetch(self, plugin, search_string, batch_size):
-        self._plugin = plugin
+        self.Stop()
 
+        self._plugin = plugin
         self._batch_size = batch_size
         self._search_string = search_string
 

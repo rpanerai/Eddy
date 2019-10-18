@@ -26,11 +26,19 @@ class TabContent(QWidget):
     def __init__(self, index, parent=None):
         super(TabContent, self).__init__(parent)
 
+        self._database_table = Table(DATABASE_IN_MEMORY, "tab" + str(index))
+
+        self._fetcher = Fetcher()
+        self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
+        self._fetcher.BatchProgress.connect(self._HandleFetchingProgress)
+        self._fetcher.BatchReady.connect(self._database_table.AddData)
+        self._fetcher.FetchingFinished.connect(self._HandleFetchingCompleted)
+        self._fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
+        self._fetcher.FetchingError.connect(self._HandleFetchingError)
+
         self._search_bar = SearchBar()
         self._search_bar.SearchRequested.connect(self._Search)
-        self._search_bar.StopPressed.connect(self._KillSearch)
-
-        self._database_table = Table(DATABASE_IN_MEMORY, "tab" + str(index))
+        self._search_bar.StopPressed.connect(self._fetcher.Stop)
 
         table_model = TableModel(self)
         table_model.SetTable(self._database_table)
@@ -55,14 +63,6 @@ class TabContent(QWidget):
 
         self._SetupUI()
 
-        self._fetcher = Fetcher()
-        self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
-        self._fetcher.BatchProgress.connect(self._HandleFetchingProgress)
-        self._fetcher.BatchReady.connect(self._database_table.AddData)
-        self._fetcher.FetchingFinished.connect(self._HandleFetchingCompleted)
-        self._fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
-        self._fetcher.FetchingError.connect(self._HandleFetchingError)
-
     def RunSearch(self, search_string):
         self._search_bar.RunSearch(search_string)
 
@@ -81,14 +81,10 @@ class TabContent(QWidget):
         main_layout.addWidget(self._status_bar)
         self.setLayout(main_layout)
 
-    def _KillSearch(self):
-        self._fetcher.Stop()
-
     def _Search(self, source, query):
-        self._KillSearch()
         self._database_table.Clear()
-        self._fetcher.Fetch(TabContent._PLUGINS[source], query, 50)
         self.SearchStarted.emit(source, query)
+        self._fetcher.Fetch(TabContent._PLUGINS[source], query, 50)
 
     def _HandleFetchingStarted(self):
         self._status_bar.showMessage("Fetching from Inspire…")
