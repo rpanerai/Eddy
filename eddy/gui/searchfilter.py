@@ -30,7 +30,7 @@ class ACCapWidget(QWidget):
 
         self.setLayout(layout)
 
-    def SetEnabled(self, bool_):
+    def SetChecked(self, bool_):
         self._check.setChecked(bool_)
 
     def IsChecked(self):
@@ -95,8 +95,9 @@ class SearchBar(QWidget):
         self._HandleReturnPressed()
 
     def _HandleSourceChange(self, source):
+        self._ac_cap.SetChecked(False)
+
         if source == "INSPIRE":
-            self._ac_cap.SetEnabled(False)
             self._ac_cap.setVisible(True)
         elif source == "arXiv":
             self._ac_cap.setVisible(False)
