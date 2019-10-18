@@ -1,9 +1,12 @@
 import os
+import webbrowser
 from functools import partial
 
 from PySide2.QtCore import Qt, Signal, QAbstractItemModel, QItemSelectionModel, QModelIndex
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QTreeView, QHeaderView, QMenu
+
+from eddy.icons import icons
 
 
 class TableModel(QAbstractItemModel):
@@ -260,25 +263,33 @@ class TableView(QTreeView):
             return
 
         menu = QMenu()
+        action_inspire_page = menu.addAction(QIcon(icons.INSPIRE), "Open INSPIRE page")
+        action_arxiv_page = menu.addAction(QIcon(icons.ARXIV), "Open arXiv page")
         action_arxiv_pdf = menu.addAction(QIcon.fromTheme("viewpdf"), "Open arXiv PDF")
         action_references = menu.addAction(QIcon.fromTheme("system-search"), "Find references")
         action_citations = menu.addAction(QIcon.fromTheme("system-search"), "Find citations")
 
         arxiv_id = self.model().GetArXivId(index.row())
         if arxiv_id == "":
+            action_arxiv_page.setEnabled(False)
             action_arxiv_pdf.setEnabled(False)
         else:
+            arxiv_url = "https://arxiv.org/abs/" + arxiv_id
+            action_arxiv_page.triggered.connect(partial(self._OpenURL, arxiv_url))
             pdf_url = "https://arxiv.org/pdf/" + arxiv_id + ".pdf"
             action_arxiv_pdf.triggered.connect(partial(self._OpenPDF, pdf_url))
 
-        inspire_id = self.model().GetInspireId(index.row())
+        inspire_id = str(self.model().GetInspireId(index.row()))
         if inspire_id == "":
+            action_inspire_page.setEnabled(False)
             action_references.setEnabled(False)
             action_citations.setEnabled(False)
         else:
-            ref_string = "citedby:recid:" + str(inspire_id)
+            inspire_url = "https://labs.inspirehep.net/literature/" + inspire_id
+            action_inspire_page.triggered.connect(partial(self._OpenURL, inspire_url))
+            ref_string = "citedby:recid:" + inspire_id
             action_references.triggered.connect(partial(self.SearchRequested.emit, ref_string))
-            cit_string = "refersto:recid:" + str(inspire_id)
+            cit_string = "refersto:recid:" + inspire_id
             action_citations.triggered.connect(partial(self.SearchRequested.emit, cit_string))
 
         menu.exec_(self.viewport().mapToGlobal(position))
@@ -328,3 +339,7 @@ class TableView(QTreeView):
     @staticmethod
     def _OpenPDF(url):
         os.system("okular " + url + " &")
+
+    @staticmethod
+    def _OpenURL(url):
+        webbrowser.open(url)
