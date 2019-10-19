@@ -52,7 +52,7 @@ class Fetcher(QObject):
     def _FetchBatch(self):
         request = self._plugin.CreateRequest(self._search_string, self._batch_size, self._page)
         self._reply = self._manager.get(request)
-        self._reply.downloadProgress.connect(self._DownloadProgress)
+        self._reply.downloadProgress.connect(self.BatchProgress.emit)
         self._reply.finished.connect(self._HandleBatch)
 
     def _HandleBatch(self):
@@ -78,6 +78,3 @@ class Fetcher(QObject):
             self._reply.deleteLater()
             self._reply = None
             self.FetchingError.emit(error)
-
-    def _DownloadProgress(self, bytes_received, bytes_total):
-        self.BatchProgress.emit(bytes_received, bytes_total)
