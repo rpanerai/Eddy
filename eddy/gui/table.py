@@ -183,7 +183,7 @@ class TableModel(QAbstractItemModel):
 
 class TableView(QTreeView):
     ItemSelected = Signal(int)
-    SearchRequested = Signal(str)
+    NewTabRequested = Signal(dict)
 
     _PERSISTENT_SELECTION_MODE = False
 
@@ -198,7 +198,6 @@ class TableView(QTreeView):
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._HandleRightClickOnItem)
-
 
         self.header().setContextMenuPolicy(Qt.CustomContextMenu)
         self.header().customContextMenuRequested.connect(self._HandleRightClickOnHeader)
@@ -287,10 +286,12 @@ class TableView(QTreeView):
         else:
             inspire_url = "https://labs.inspirehep.net/literature/" + inspire_id
             action_inspire_page.triggered.connect(partial(self._OpenURL, inspire_url))
-            ref_string = "citedby:recid:" + inspire_id
-            action_references.triggered.connect(partial(self.SearchRequested.emit, ref_string))
-            cit_string = "refersto:recid:" + inspire_id
-            action_citations.triggered.connect(partial(self.SearchRequested.emit, cit_string))
+
+            ref_search = {"source": "INSPIRE", "query": "citedby:recid:" + inspire_id}
+            action_references.triggered.connect(partial(self.NewTabRequested.emit, ref_search))
+
+            cit_search = {"source": "INSPIRE", "query": "refersto:recid:" + inspire_id}
+            action_citations.triggered.connect(partial(self.NewTabRequested.emit, cit_search))
 
         menu.exec_(self.viewport().mapToGlobal(position))
 

@@ -54,9 +54,12 @@ class SourceCombo(QComboBox):
         for s in SourceCombo._SOURCES:
             self.addItem(QIcon(SourceCombo._ICONS[s]), s)
 
+    def SetSource(self, source):
+        self.setCurrentText(source)
+
 
 class SearchBar(QWidget):
-    SearchRequested = Signal(str, str)
+    SearchRequested = Signal(dict)
     StopPressed = Signal()
 
     def __init__(self, parent=None):
@@ -90,8 +93,9 @@ class SearchBar(QWidget):
     def SetStopEnabled(self, bool_):
         self._kill_button.setEnabled(bool_)
 
-    def RunSearch(self, search_string):
-        self._query_edit.setText(search_string)
+    def RunSearch(self, search):
+        self._source_combo.SetSource(search["source"])
+        self._query_edit.setText(search["query"])
         self._HandleReturnPressed()
 
     def _HandleSourceChange(self, source):
@@ -104,14 +108,15 @@ class SearchBar(QWidget):
 
     def _HandleReturnPressed(self):
         source = self._source_combo.currentText()
-        search_string = " ".join(self._query_edit.text().split())
+        query = " ".join(self._query_edit.text().split())
 
-        if search_string == "":
+        if query == "":
             return
 
         if self._ac_cap.IsChecked():
-            search_string = search_string + " and ac <= " + str(self._ac_cap.Value())
-        self.SearchRequested.emit(source, search_string)
+            query = query + " and ac <= " + str(self._ac_cap.Value())
+
+        self.SearchRequested.emit({"source": source, "query": query})
 
 
 class FilterBar(QLineEdit):

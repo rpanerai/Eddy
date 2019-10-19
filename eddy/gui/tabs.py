@@ -15,8 +15,8 @@ from eddy.icons import icons
 
 
 class TabContent(QWidget):
-    SearchRequested = Signal(str)
-    SearchStarted = Signal(str, str)
+    NewTabRequested = Signal(dict)
+    SearchStarted = Signal(dict)
 
     _PLUGINS = {
         "INSPIRE": InspirePlugin,
@@ -37,7 +37,7 @@ class TabContent(QWidget):
         self._fetcher.FetchingError.connect(self._HandleFetchingError)
 
         self._search_bar = SearchBar()
-        self._search_bar.SearchRequested.connect(self._Search)
+        self._search_bar.SearchRequested.connect(self._HandleSearchRequested)
         self._search_bar.StopPressed.connect(self._fetcher.Stop)
 
         table_model = TableModel(self)
@@ -48,7 +48,7 @@ class TabContent(QWidget):
 
         self._table_view = TableView()
         self._table_view.setModel(table_model)
-        self._table_view.SearchRequested.connect(self.SearchRequested.emit)
+        self._table_view.NewTabRequested.connect(self.NewTabRequested)
 
         item_model = ItemModel(self)
         item_model.SetTable(self._database_table)
@@ -63,8 +63,8 @@ class TabContent(QWidget):
 
         self._SetupUI()
 
-    def RunSearch(self, search_string):
-        self._search_bar.RunSearch(search_string)
+    def RunSearch(self, search):
+        self._search_bar.RunSearch(search)
 
     def _SetupUI(self):
         main_layout = QVBoxLayout()
@@ -81,11 +81,11 @@ class TabContent(QWidget):
         main_layout.addWidget(self._status_bar)
         self.setLayout(main_layout)
 
-    def _Search(self, source, query):
+    def _HandleSearchRequested(self, search):
         self._database_table.Clear()
         self._filter_bar.clear()
-        self.SearchStarted.emit(source, query)
-        self._fetcher.Fetch(TabContent._PLUGINS[source], query, 50)
+        self.SearchStarted.emit(search)
+        self._fetcher.Fetch(TabContent._PLUGINS[search["source"]], search["query"], 50)
 
     def _HandleFetchingStarted(self):
         self._status_bar.showMessage("Fetching from Inspire…")
@@ -139,23 +139,23 @@ class TabSystem(QTabWidget):
         if self.count() == 0:
             self.LastTabClosed.emit()
 
-    def AddTab(self, search_string=None):
+    def AddTab(self, search=None):
         self.index = self.index + 1
         new_tab = TabContent(self.index)
         self.addTab(new_tab, "New Tab")
 
-        new_tab.SearchRequested.connect(self.AddTab)
+        new_tab.NewTabRequested.connect(self.AddTab)
         new_tab.SearchStarted.connect(self.RenameTab)
 
         self.setCurrentWidget(new_tab)
 
-        if search_string is not None:
-            new_tab.RunSearch(search_string)
+        if search is not None:
+            new_tab.RunSearch(search)
 
-    def RenameTab(self, source, query):
+    def RenameTab(self, search):
         index = self.indexOf(self.sender())
-        self.setTabIcon(index, QIcon(TabSystem._ICONS[source]))
-        self.setTabText(index, query)
+        self.setTabIcon(index, QIcon(TabSystem._ICONS[search["source"]]))
+        self.setTabText(index, search["query"])
 
     def mouseDoubleClickEvent(self, event):
         super(TabSystem, self).mouseDoubleClickEvent(event)
