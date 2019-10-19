@@ -74,7 +74,7 @@ class SearchBar(QWidget):
         self._kill_button.setFlat(True)
         self._kill_button.setMaximumSize(31, 31)
         self._kill_button.setEnabled(False)
-        self._kill_button.clicked.connect(self._HandleStopPressed)
+        self._kill_button.clicked.connect(self.StopPressed)
 
         self._ac_cap = ACCapWidget()
 
@@ -112,9 +112,6 @@ class SearchBar(QWidget):
         if self._ac_cap.IsChecked():
             search_string = search_string + " and ac <= " + str(self._ac_cap.Value())
         self.SearchRequested.emit(source, search_string)
-
-    def _HandleStopPressed(self):
-        self.StopPressed.emit()
 
 
 class FilterBar(QLineEdit):
