@@ -90,6 +90,8 @@ class SearchBar(QWidget):
 
         self.setLayout(layout)
 
+        self.setFocusProxy(self._query_edit)
+
     def SetStopEnabled(self, bool_):
         self._kill_button.setEnabled(bool_)
 

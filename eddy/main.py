@@ -36,6 +36,8 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(application.quit)
         file_menu.addAction(exit_action)
 
+        main_widget.AddTab()
+
 
 def run():
     application = QApplication(sys.argv)

@@ -63,6 +63,8 @@ class TabContent(QWidget):
 
         self._SetupUI()
 
+        self.setFocusProxy(self._search_bar)
+
     def RunSearch(self, search):
         self._search_bar.RunSearch(search)
 
@@ -130,7 +132,8 @@ class TabSystem(QTabWidget):
         self.tabCloseRequested.connect(self.CloseTab)
 
         self.index = 0
-        self.AddTab()
+
+        # self.setFocusPolicy(Qt.NoFocus)
 
     def CloseTab(self, index):
         self.widget(index).deleteLater()
@@ -138,6 +141,8 @@ class TabSystem(QTabWidget):
 
         if self.count() == 0:
             self.LastTabClosed.emit()
+        else:
+            self.currentWidget().setFocus()
 
     def AddTab(self, search=None):
         self.index = self.index + 1
@@ -148,6 +153,8 @@ class TabSystem(QTabWidget):
         new_tab.SearchStarted.connect(self.RenameTab)
 
         self.setCurrentWidget(new_tab)
+
+        new_tab.setFocus()
 
         if search is not None:
             new_tab.RunSearch(search)
