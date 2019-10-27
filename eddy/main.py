@@ -1,8 +1,9 @@
 import sys
 from functools import partial
 
+from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QApplication, QMainWindow, QAction
+from PySide2.QtWidgets import QApplication, QMainWindow, QAction, QStyle
 
 from eddy.gui.tabs import TabSystem
 
@@ -14,9 +15,14 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Eddy")
 
         self.setMinimumSize(600, 400)
-        # screen_space = application.desktop().availableGeometry(self)
-        # self.resize(screen_space.width() * 0.5, screen_space.height() * 0.5)
-        self.resize(1200, 800)
+        self.setGeometry(
+            QStyle.alignedRect(
+                Qt.LeftToRight,
+                Qt.AlignCenter,
+                QSize(1100, 720),
+                application.desktop().availableGeometry(self)
+            )
+        )
 
         main_widget = TabSystem()
         # main_widget.LastTabClosed.connect(application.quit)
