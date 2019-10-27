@@ -1,7 +1,10 @@
+from functools import partial
+
 from PySide2.QtCore import Signal
 from PySide2.QtGui import Qt, QIcon
 from PySide2.QtWidgets import (
-    QWidget, QVBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar, QSizePolicy
+    QWidget, QVBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar, QSizePolicy,
+    QPushButton
 )
 
 from eddy.network.fetcher import Fetcher
@@ -134,6 +137,10 @@ class TabSystem(QTabWidget):
         self.index = 0
 
         # self.setFocusPolicy(Qt.NoFocus)
+
+        new_tab_button = QPushButton(QIcon.fromTheme("tab-new"), "")
+        new_tab_button.clicked.connect(partial(self.AddTab, None))
+        self.setCornerWidget(new_tab_button, Qt.Corner.TopLeftCorner)
 
     def CloseTab(self, index):
         self.widget(index).deleteLater()
