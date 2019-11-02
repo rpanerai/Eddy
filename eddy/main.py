@@ -36,16 +36,28 @@ class MainWindow(QMainWindow):
         new_tab_action.setShortcut("Ctrl+T")
         new_tab_action.triggered.connect(partial(main_widget.AddTab, None))
         file_menu.addAction(new_tab_action)
+        self.addAction(new_tab_action)
 
         close_tab_action = QAction(QIcon.fromTheme("tab-close"), "Close Tab", self)
         close_tab_action.setShortcut("Ctrl+W")
         close_tab_action.triggered.connect(main_widget.CloseCurrentTab)
         file_menu.addAction(close_tab_action)
+        self.addAction(close_tab_action)
 
         exit_action = QAction(QIcon.fromTheme("application-exit"), "&Quit", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(application.quit)
         file_menu.addAction(exit_action)
+        self.addAction(exit_action)
+
+        toggle_menubar_action = QAction(self)
+        toggle_menubar_action.setShortcut("Ctrl+M")
+        toggle_menubar_action.triggered.connect(
+            lambda: menubar.setVisible(not menubar.isVisible())
+        )
+        self.addAction(toggle_menubar_action)
+
+        menubar.setVisible(False)
 
         main_widget.AddTab()
 
