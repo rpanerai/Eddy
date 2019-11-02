@@ -131,18 +131,24 @@ class TabSystem(QTabWidget):
     def __init__(self, parent=None):
         super(TabSystem, self).__init__(parent)
 
+        self.setElideMode(Qt.ElideRight)
+
+        self.setDocumentMode(True)
+
         self.setTabsClosable(True)
-        self.tabCloseRequested.connect(self.CloseTab)
-
-        self.index = 0
-
-        # self.setFocusPolicy(Qt.NoFocus)
+        self.tabCloseRequested.connect(self._CloseTab)
 
         new_tab_button = QPushButton(QIcon.fromTheme("tab-new"), "")
         new_tab_button.clicked.connect(partial(self.AddTab, None))
         self.setCornerWidget(new_tab_button, Qt.Corner.TopLeftCorner)
 
-    def CloseTab(self, index):
+        self.setMovable(True)
+
+        # self.setFocusPolicy(Qt.NoFocus)
+
+        self.index = 0
+
+    def _CloseTab(self, index):
         self.widget(index).deleteLater()
         self.removeTab(index)
 
@@ -170,10 +176,3 @@ class TabSystem(QTabWidget):
         index = self.indexOf(self.sender())
         self.setTabIcon(index, QIcon(TabSystem._ICONS[search["source"]]))
         self.setTabText(index, search["query"])
-
-    def mouseDoubleClickEvent(self, event):
-        super(TabSystem, self).mouseDoubleClickEvent(event)
-
-        # We should check the region where the double click takes place.
-        # So far, any part of the widget will trigger this.
-        self.AddTab()
