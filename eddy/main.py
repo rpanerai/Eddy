@@ -37,6 +37,11 @@ class MainWindow(QMainWindow):
         new_tab_action.triggered.connect(partial(main_widget.AddTab, None))
         file_menu.addAction(new_tab_action)
 
+        close_tab_action = QAction(QIcon.fromTheme("tab-close"), "Close Tab", self)
+        close_tab_action.setShortcut("Ctrl+W")
+        close_tab_action.triggered.connect(main_widget.CloseCurrentTab)
+        file_menu.addAction(close_tab_action)
+
         exit_action = QAction(QIcon.fromTheme("application-exit"), "&Quit", self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.triggered.connect(application.quit)

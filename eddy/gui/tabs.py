@@ -157,6 +157,9 @@ class TabSystem(QTabWidget):
         else:
             self.currentWidget().setFocus()
 
+    def CloseCurrentTab(self):
+        self._CloseTab(self.currentIndex())
+
     def AddTab(self, search=None):
         self.index = self.index + 1
         new_tab = TabContent(self.index)
