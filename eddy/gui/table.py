@@ -160,6 +160,9 @@ class TableModel(QAbstractItemModel):
     def GetInspireId(self, row):
         return self._table.GetRecord(self.GetId(row), ("inspire_id",))["inspire_id"]
 
+    def GetDOIs(self, row):
+        return self._table.GetRecord(self.GetId(row), ("dois",))["dois"]
+
     def _CreateSortFilterMap(self):
         ids = self._table.GetTable(
             ("id",),
@@ -265,6 +268,8 @@ class TableView(QTreeView):
         action_inspire_page = menu.addAction(QIcon(icons.INSPIRE), "Open INSPIRE page")
         action_arxiv_page = menu.addAction(QIcon(icons.ARXIV), "Open arXiv page")
         action_arxiv_pdf = menu.addAction(QIcon.fromTheme("viewpdf"), "Open arXiv PDF")
+        action_doi_link = menu.addAction(QIcon(icons.DOI), "Open DOI links")
+        menu.addSeparator()
         action_references = menu.addAction(QIcon.fromTheme("system-search"), "Find references")
         action_citations = menu.addAction(QIcon.fromTheme("system-search"), "Find citations")
 
@@ -292,6 +297,14 @@ class TableView(QTreeView):
 
             cit_search = {"source": "INSPIRE", "query": "refersto:recid:" + inspire_id}
             action_citations.triggered.connect(partial(self.NewTabRequested.emit, cit_search))
+
+        dois = self.model().GetDOIs(index.row())
+        if dois == []:
+            action_doi_link.setEnabled(False)
+        else:
+            doi_urls = ("https://doi.org/" + s for s in dois)
+            for u in doi_urls:
+                action_doi_link.triggered.connect(partial(self._OpenURL, u))
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
