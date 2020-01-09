@@ -76,10 +76,11 @@ class Table(QObject):
 
         self.Updated.emit()
 
-    def GetTable(self, keys, filter_string=None, sort_key=None, sort_order="DESC"):
+    def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=()):
         query = "SELECT " + ", ".join(keys) + " FROM " + self._name
-        if filter_string is not None:
-            query = query + " WHERE title LIKE '" + filter_string + "'"
+        for i, s in enumerate(filter_strings):
+            query = query + (" WHERE " if i == 0 else " AND ")
+            query = query + "authors || title LIKE '%" + s + "%'"
         if sort_key is not None:
             query = query + " ORDER BY " + sort_key + " " + sort_order
 

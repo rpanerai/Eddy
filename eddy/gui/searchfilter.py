@@ -1,3 +1,5 @@
+#import re
+
 from PySide2.QtCore import Signal
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (
@@ -122,11 +124,19 @@ class SearchBar(QWidget):
 
 
 class FilterBar(QLineEdit):
-    TextChanged = Signal(str)
+    TextChanged = Signal(list)
 
     def __init__(self, parent=None):
         super(FilterBar, self).__init__(parent)
 
         self.setClearButtonEnabled(True)
-        self.setPlaceholderText("Filter titles")
-        self.textChanged.connect(self.TextChanged)
+        self.setPlaceholderText("Filter authors and titles")
+        self.textChanged.connect(self._HandleTextChanged)
+
+    def _HandleTextChanged(self, text):
+        filter_strings = text.split()
+        # The above implements search at the level of individual (space-separated) words.
+        # Search with strings enclosed between braces can be introduced with
+        #filter_strings = [s.strip('"') for s in re.findall(r'[^\s"]+|"[^"]*"', text)]
+
+        self.TextChanged.emit(filter_strings)

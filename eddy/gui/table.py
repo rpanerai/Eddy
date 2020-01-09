@@ -43,7 +43,7 @@ class TableModel(QAbstractItemModel):
         self._sort_key = "id"
         self._sort_order = "ASC"
 
-        self._filter_string = None
+        self._filter_strings = []
 
     def rowCount(self, parent=QModelIndex()):
         return len(self._model_map)
@@ -127,11 +127,8 @@ class TableModel(QAbstractItemModel):
 
         self._RequestSelection()
 
-    def Filter(self, string):
-        if string == "":
-            self._filter_string = None
-        else:
-            self._filter_string = "%" + string + "%"
+    def Filter(self, filter_strings):
+        self._filter_strings = filter_strings
 
         if self._model == []:
             return
@@ -166,9 +163,9 @@ class TableModel(QAbstractItemModel):
     def _CreateSortFilterMap(self):
         ids = self._table.GetTable(
             ("id",),
-            self._filter_string,
             self._sort_key,
-            self._sort_order
+            self._sort_order,
+            self._filter_strings
         )
 
         self._model_map = [d["id"] for d in ids]
