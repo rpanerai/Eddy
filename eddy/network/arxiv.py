@@ -37,7 +37,7 @@ class ArXivPlugin():
             "inspire_id": "",
             "texkey": "",
             "arxiv_id": d.get("id", "").rsplit("/abs/", 1)[1].rsplit("v", 1)[0],
-            "dois": [d.get("arxiv_doi", "")]
+            "dois": [d["arxiv_doi"]] if "arxiv_doi" in d else []
         } for (i, d) in enumerate(raw_data["entries"])]
 
         total = int(raw_data["feed"]["opensearch_totalresults"])
