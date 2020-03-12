@@ -46,9 +46,13 @@ class TableModel(QAbstractItemModel):
         self._filter_strings = []
 
     def rowCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
         return len(self._model_map)
 
     def columnCount(self, parent=QModelIndex()):
+        if parent.isValid():
+            return 0
         return len(TableModel.HEADERS)
 
     def index(self, row, column, parent=QModelIndex()):
