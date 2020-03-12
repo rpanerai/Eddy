@@ -14,6 +14,7 @@ from eddy.data.database import DATABASE_IN_MEMORY, Table
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemModel, ItemView
 from eddy.gui.searchfilter import SearchBar, FilterBar
+from eddy.gui.source import SourceModel, SourcePanel
 from eddy.icons import icons
 
 
@@ -39,9 +40,16 @@ class TabContent(QWidget):
         self._fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
         self._fetcher.FetchingError.connect(self._HandleFetchingError)
 
+        self._source_model = SourceModel()
+        self._source_panel = SourcePanel()
+        self._source_panel.setModel(self._source_model)
+
         self._search_bar = SearchBar()
+        self._source_panel.SourceSelected.connect(self._search_bar._HandleSourceChange)
         self._search_bar.SearchRequested.connect(self._HandleSearchRequested)
         self._search_bar.StopPressed.connect(self._fetcher.Stop)
+
+        self._source_panel.SelectSource("INSPIRE")
 
         table_model = TableModel(self)
         table_model.SetTable(self._database_table)
@@ -69,20 +77,35 @@ class TabContent(QWidget):
         self.setFocusProxy(self._search_bar)
 
     def RunSearch(self, search):
+        self._source_panel.SelectSource(search["source"])
         self._search_bar.RunSearch(search)
 
     def _SetupUI(self):
         main_layout = QVBoxLayout()
-        splitter = QSplitter()
-        splitter.setOrientation(Qt.Horizontal)
-        splitter.addWidget(self._table_view)
-        splitter.addWidget(self._item_view)
-        splitter.setStretchFactor(0, 2)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        main_layout.addWidget(self._search_bar)
-        main_layout.addWidget(self._filter_bar)
-        main_layout.addWidget(splitter)
+        central_widget = QWidget()
+        central_layout = QVBoxLayout(central_widget)
+
+        item_splitter = QSplitter(Qt.Horizontal)
+        item_splitter.addWidget(self._table_view)
+        item_splitter.addWidget(self._item_view)
+        item_splitter.setStretchFactor(0, 2)
+        item_splitter.setStretchFactor(1, 1)
+        item_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        panel_splitter = QSplitter(Qt.Horizontal)
+        panel_splitter.addWidget(self._source_panel)
+        panel_splitter.addWidget(central_widget)
+        # panel_splitter.setStretchFactor(0, 1)
+        # panel_splitter.setStretchFactor(1, 3)
+        panel_splitter.setSizes([80, panel_splitter.width() - 80])
+        panel_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        central_layout.addWidget(self._search_bar)
+        central_layout.addWidget(self._filter_bar)
+        central_layout.addWidget(item_splitter)
+        central_layout.setContentsMargins(0, 0, 0, 0)
+
+        main_layout.addWidget(panel_splitter)
         main_layout.addWidget(self._status_bar)
         self.setLayout(main_layout)
 

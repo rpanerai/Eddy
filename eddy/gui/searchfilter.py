@@ -1,12 +1,10 @@
-#import re
+# import re
 
 from PySide2.QtCore import Signal
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (
-    QWidget, QHBoxLayout, QPushButton, QLineEdit, QCheckBox, QSpinBox, QComboBox
+    QWidget, QHBoxLayout, QPushButton, QLineEdit, QCheckBox, QSpinBox
 )
-
-from eddy.icons import icons
 
 
 class ACCapWidget(QWidget):
@@ -42,24 +40,6 @@ class ACCapWidget(QWidget):
         return self._spin.value()
 
 
-class SourceCombo(QComboBox):
-    _ICONS = {
-        "INSPIRE": icons.INSPIRE,
-        "arXiv": icons.ARXIV
-    }
-
-    _SOURCES = tuple(_ICONS.keys())
-
-    def __init__(self, parent=None):
-        super(SourceCombo, self).__init__(parent)
-
-        for s in SourceCombo._SOURCES:
-            self.addItem(QIcon(SourceCombo._ICONS[s]), s)
-
-    def SetSource(self, source):
-        self.setCurrentText(source)
-
-
 class SearchBar(QWidget):
     SearchRequested = Signal(dict)
     StopPressed = Signal()
@@ -67,8 +47,7 @@ class SearchBar(QWidget):
     def __init__(self, parent=None):
         super(SearchBar, self).__init__(parent)
 
-        self._source_combo = SourceCombo()
-        self._source_combo.currentTextChanged.connect(self._HandleSourceChange)
+        self._source = "INSPIRE"
 
         self._query_edit = QLineEdit()
         self._query_edit.setClearButtonEnabled(True)
@@ -84,7 +63,6 @@ class SearchBar(QWidget):
         self._ac_cap = ACCapWidget()
 
         layout = QHBoxLayout()
-        layout.addWidget(self._source_combo)
         layout.addWidget(self._kill_button)
         layout.addWidget(self._query_edit)
         layout.addWidget(self._ac_cap)
@@ -98,11 +76,15 @@ class SearchBar(QWidget):
         self._kill_button.setEnabled(bool_)
 
     def RunSearch(self, search):
-        self._source_combo.SetSource(search["source"])
+        self._source = search["source"]
         self._query_edit.setText(search["query"])
         self._HandleReturnPressed()
 
     def _HandleSourceChange(self, source):
+        if source == self._source:
+            return
+        self._source = source
+
         self._ac_cap.SetChecked(False)
 
         if source == "INSPIRE":
@@ -111,7 +93,6 @@ class SearchBar(QWidget):
             self._ac_cap.setVisible(False)
 
     def _HandleReturnPressed(self):
-        source = self._source_combo.currentText()
         query = " ".join(self._query_edit.text().split())
 
         if query == "":
@@ -120,7 +101,7 @@ class SearchBar(QWidget):
         if self._ac_cap.IsChecked():
             query = query + " and ac <= " + str(self._ac_cap.Value())
 
-        self.SearchRequested.emit({"source": source, "query": query})
+        self.SearchRequested.emit({"source": self._source, "query": query})
 
 
 class FilterBar(QLineEdit):
