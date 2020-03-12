@@ -47,7 +47,7 @@ class TabContent(QWidget):
         self._search_bar = SearchBar()
         self._source_panel.SourceSelected.connect(self._search_bar._HandleSourceChange)
         self._search_bar.SearchRequested.connect(self._HandleSearchRequested)
-        self._search_bar.StopPressed.connect(self._fetcher.Stop)
+        self._search_bar.StopPressed.connect(self.StopFetching)
 
         self._source_panel.SelectSource("INSPIRE")
 
@@ -79,6 +79,9 @@ class TabContent(QWidget):
     def RunSearch(self, search):
         self._source_panel.SelectSource(search["source"])
         self._search_bar.RunSearch(search)
+
+    def StopFetching(self):
+        self._fetcher.Stop()
 
     def _SetupUI(self):
         main_layout = QVBoxLayout()
@@ -172,7 +175,10 @@ class TabSystem(QTabWidget):
         self.index = 0
 
     def _CloseTab(self, index):
-        self.widget(index).deleteLater()
+        content = self.widget(index)
+        content.StopFetching()
+        content.deleteLater()
+
         self.removeTab(index)
 
         if self.count() == 0:
