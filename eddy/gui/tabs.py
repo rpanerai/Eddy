@@ -89,6 +89,7 @@ class TabContent(QWidget):
         central_layout = QVBoxLayout(central_widget)
 
         item_splitter = QSplitter(Qt.Horizontal)
+        item_splitter.setHandleWidth(4)
         item_splitter.addWidget(self._table_view)
         item_splitter.addWidget(self._item_view)
         item_splitter.setStretchFactor(0, 2)
@@ -96,6 +97,7 @@ class TabContent(QWidget):
         item_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         panel_splitter = QSplitter(Qt.Horizontal)
+        panel_splitter.setHandleWidth(4)
         panel_splitter.addWidget(self._source_panel)
         panel_splitter.addWidget(central_widget)
         # panel_splitter.setStretchFactor(0, 1)
