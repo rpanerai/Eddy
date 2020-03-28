@@ -4,6 +4,7 @@ from PySide2.QtWidgets import QTreeView
 
 from eddy.icons import icons
 
+
 class SourceModel(QStandardItemModel):
     def __init__(self, parent=None):
         super(SourceModel, self).__init__(parent)
@@ -19,22 +20,26 @@ class SourceModel(QStandardItemModel):
 
         inspire = QStandardItem(QIcon(icons.INSPIRE), "INSPIRE")
         inspire.setEditable(False)
+        # inspire_ac = QStandardItem(QIcon(icons.INSPIRE), "ac < 10")
+        # inspire_ac.setEditable(False)
         arxiv = QStandardItem(QIcon(icons.ARXIV), "arXiv")
         arxiv.setEditable(False)
 
         self.ITEMS = {
             "INSPIRE": inspire,
+            # "INSPIRE ac": inspire_ac,
             "arXiv": arxiv
         }
 
         root.appendRow(web_search)
         web_search.appendRow(inspire)
+        # inspire.appendRow(inspire_ac)
         web_search.appendRow(arxiv)
         root.appendRow(local)
 
 
 class SourcePanel(QTreeView):
-    SourceSelected = Signal(str)
+    SearchRequested = Signal(dict)
 
     def __init__(self, parent=None):
         super(SourcePanel, self).__init__(parent)
@@ -45,6 +50,8 @@ class SourcePanel(QTreeView):
         # self.viewport().setAutoFillBackground(False)
         self.setWordWrap(True)
         self.setHeaderHidden(True)
+
+        self._selected_source = None
 
     def setModel(self, model):
         super(SourcePanel, self).setModel(model)
@@ -82,7 +89,7 @@ class SourcePanel(QTreeView):
             return
 
         item = self.model().itemFromIndex(rows[0])
-        self.SourceSelected.emit(item.text())
+        self._selected_source = item.text()
 
     def SelectSource(self, source):
         item = self.model().ITEMS[source]
@@ -99,3 +106,6 @@ class SourcePanel(QTreeView):
             index,
             QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         )
+
+    def LaunchSearch(self, query):
+        self.SearchRequested.emit({"source": self._selected_source, "query": query})

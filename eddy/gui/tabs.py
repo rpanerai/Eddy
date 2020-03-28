@@ -27,7 +27,7 @@ class TabContent(QWidget):
         "arXiv": ArXivPlugin
     }
 
-    def __init__(self, index, parent=None):
+    def __init__(self, index, source_model, parent=None):
         super(TabContent, self).__init__(parent)
 
         self._database_table = Table(DATABASE_IN_MEMORY, "tab" + str(index))
@@ -40,13 +40,12 @@ class TabContent(QWidget):
         self._fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
         self._fetcher.FetchingError.connect(self._HandleFetchingError)
 
-        self._source_model = SourceModel()
         self._source_panel = SourcePanel()
-        self._source_panel.setModel(self._source_model)
+        self._source_panel.setModel(source_model)
 
         self._search_bar = SearchBar()
-        self._source_panel.SourceSelected.connect(self._search_bar._HandleSourceChange)
-        self._search_bar.SearchRequested.connect(self._HandleSearchRequested)
+        self._search_bar.QueryLaunched.connect(self._source_panel.LaunchSearch)
+        self._source_panel.SearchRequested.connect(self._HandleSearchRequested)
         self._search_bar.StopPressed.connect(self.StopFetching)
 
         self._source_panel.SelectSource("INSPIRE")
@@ -78,7 +77,7 @@ class TabContent(QWidget):
 
     def RunSearch(self, search):
         self._source_panel.SelectSource(search["source"])
-        self._search_bar.RunSearch(search)
+        self._search_bar.LaunchQuery(search["query"])
 
     def StopFetching(self):
         self._fetcher.Stop()
@@ -174,7 +173,8 @@ class TabSystem(QTabWidget):
 
         # self.setFocusPolicy(Qt.NoFocus)
 
-        self.index = 0
+        self._index = 0
+        self._source_model = SourceModel()
 
     def _CloseTab(self, index):
         content = self.widget(index)
@@ -192,8 +192,8 @@ class TabSystem(QTabWidget):
         self._CloseTab(self.currentIndex())
 
     def AddTab(self, search=None):
-        self.index = self.index + 1
-        new_tab = TabContent(self.index)
+        self._index = self._index + 1
+        new_tab = TabContent(self._index, self._source_model)
         self.addTab(new_tab, "New Tab")
 
         new_tab.NewTabRequested.connect(self.AddTab)
