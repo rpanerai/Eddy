@@ -120,7 +120,7 @@ class TabContent(QWidget):
         self._fetcher.Fetch(TabContent._PLUGINS[search["source"]], search["query"], 50)
 
     def _HandleFetchingStarted(self):
-        self._status_bar.showMessage("Fetching from Inspire…")
+        self._status_bar.showMessage("Fetching…")
         self._progress_bar.reset()
         self._progress_bar.show()
         self._search_bar.SetStopEnabled(True)
