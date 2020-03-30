@@ -9,7 +9,7 @@ class InspirePlugin():
     @staticmethod
     def CreateRequest(search_string, batch_size, page):
         url = (
-            "https://labs.inspirehep.net/api/literature?sort=mostrecent"
+            "https://inspirehep.net/api/literature?sort=mostrecent"
             + "&q=" + urllib.parse.quote(search_string)
             + "&size=" + str(batch_size)
             + "&page=" + str(page)
