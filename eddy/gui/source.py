@@ -2,7 +2,9 @@ from PySide2.QtCore import Signal, QItemSelectionModel
 from PySide2.QtGui import QIcon, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QTreeView
 
+from paths import ROOT_DIR, LOCAL_DATABASES
 from eddy.icons import icons
+from eddy.data.database import Database, Table
 
 
 class SourceModel(QStandardItemModel):
@@ -25,11 +27,18 @@ class SourceModel(QStandardItemModel):
         arxiv = QStandardItem(QIcon(icons.ARXIV), "arXiv")
         arxiv.setEditable(False)
 
-        self.ITEMS = {
+        self._ITEMS = {
             "INSPIRE": inspire,
             # "INSPIRE ac": inspire_ac,
             "arXiv": arxiv
         }
+
+        self._TABLES = {}
+        for (n, p) in LOCAL_DATABASES.items():
+            self._TABLES[n] = Table(Database(p), "tab")
+            i = QStandardItem(QIcon.fromTheme("server-database"), n)
+            i.setEditable(False)
+            local.appendRow(i)
 
         root.appendRow(web_search)
         web_search.appendRow(inspire)
@@ -40,6 +49,8 @@ class SourceModel(QStandardItemModel):
 
 class SourcePanel(QTreeView):
     SearchRequested = Signal(dict)
+    WebSourceSelected = Signal()
+    LocalSourceSelected = Signal(Table)
 
     def __init__(self, parent=None):
         super(SourcePanel, self).__init__(parent)
@@ -68,7 +79,7 @@ class SourcePanel(QTreeView):
         # Deselect | Rows -> 36
 
         # For the moment, it does not seem to be necessary to read
-        # the value returned by the Sourceal implementation.
+        # the value returned by the original implementation.
         # It might turn out to be useful in the following, where we might not want to
         # automatically respont to any event associated to a selectable index with a Select flag
         # (e.g. a request for a context menu).
@@ -91,8 +102,14 @@ class SourcePanel(QTreeView):
         item = self.model().itemFromIndex(rows[0])
         self._selected_source = item.text()
 
+        table = self.model()._TABLES.get(self._selected_source, None)
+        if table == None:
+            self.WebSourceSelected.emit()
+        else:
+            self.LocalSourceSelected.emit(table)
+
     def SelectSource(self, source):
-        item = self.model().ITEMS[source]
+        item = self.model()._ITEMS[source]
         index = self.model().indexFromItem(item)
 
         selection_model = self.selectionModel()

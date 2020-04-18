@@ -107,6 +107,9 @@ class TableModel(QAbstractItemModel):
         self._table.Cleared.connect(self.Clear)
         self._table.Updated.connect(self.Update)
 
+        self.Clear()
+        self.Update()
+
     def Clear(self):
         self.beginResetModel()
         self._model = []

@@ -10,7 +10,7 @@ from PySide2.QtWidgets import (
 from eddy.network.fetcher import Fetcher
 from eddy.network.inspire import InspirePlugin
 from eddy.network.arxiv import ArXivPlugin
-from eddy.data.database import DATABASE_IN_MEMORY, Table
+from eddy.data.database import Database, Table
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemModel, ItemView
 from eddy.gui.searchfilter import SearchBar, FilterBar
@@ -20,17 +20,18 @@ from eddy.icons import icons
 
 class TabContent(QWidget):
     NewTabRequested = Signal(dict)
-    SearchStarted = Signal(dict)
+    TitleRequested = Signal(str, str)
 
     _PLUGINS = {
         "INSPIRE": InspirePlugin,
         "arXiv": ArXivPlugin
     }
 
-    def __init__(self, index, source_model, parent=None):
+    def __init__(self, index, source_model, memory_database, parent=None):
         super(TabContent, self).__init__(parent)
 
-        self._database_table = Table(DATABASE_IN_MEMORY, "tab" + str(index))
+        self._database_table = Table(memory_database, "tab" + str(index), drop_on_del=True)
+        self._database_table.Clear()
 
         self._fetcher = Fetcher()
         self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
@@ -42,34 +43,35 @@ class TabContent(QWidget):
 
         self._source_panel = SourcePanel()
         self._source_panel.setModel(source_model)
+        self._source_panel.WebSourceSelected.connect(self._HandleWebSourceSelected)
+        self._source_panel.LocalSourceSelected.connect(self._HandleLocalSourceSelected)
 
         self._search_bar = SearchBar()
         self._search_bar.QueryLaunched.connect(self._source_panel.LaunchSearch)
         self._source_panel.SearchRequested.connect(self._HandleSearchRequested)
         self._search_bar.StopPressed.connect(self.StopFetching)
 
-        self._source_panel.SelectSource("INSPIRE")
-
-        table_model = TableModel(self)
-        table_model.SetTable(self._database_table)
+        self._table_model = TableModel(self)
 
         self._filter_bar = FilterBar()
-        self._filter_bar.TextChanged.connect(table_model.Filter)
+        self._filter_bar.TextChanged.connect(self._table_model.Filter)
 
         self._table_view = TableView()
-        self._table_view.setModel(table_model)
+        self._table_view.setModel(self._table_model)
         self._table_view.NewTabRequested.connect(self.NewTabRequested)
 
-        item_model = ItemModel(self)
-        item_model.SetTable(self._database_table)
-        self._table_view.ItemSelected.connect(item_model.DisplayRecord)
+        self._item_model = ItemModel(self)
+        self._table_view.ItemSelected.connect(self._item_model.DisplayRecord)
         self._item_view = ItemView()
-        self._item_view.setModel(item_model)
+        self._item_view.setModel(self._item_model)
 
         self._status_bar = QStatusBar()
         self._progress_bar = QProgressBar()
         self._progress_bar.hide()
         self._status_bar.addPermanentWidget(self._progress_bar)
+
+        self._web_source_active = False
+        self._source_panel.SelectSource("INSPIRE")
 
         self._SetupUI()
 
@@ -113,11 +115,39 @@ class TabContent(QWidget):
         main_layout.addWidget(self._status_bar)
         self.setLayout(main_layout)
 
+    def _HandleWebSourceSelected(self):
+        if self._web_source_active:
+            return
+
+        self._web_source_active = True
+        self.TitleRequested.emit("", "")
+        self._search_bar.SetQueryEditEnabled(True)
+        self._filter_bar.clear()
+        self._database_table.Clear()
+        self._table_model.SetTable(self._database_table)
+        self._item_model.SetTable(self._database_table)
+
+    def _HandleLocalSourceSelected(self, table):
+        if self._web_source_active:
+            self._web_source_active = False
+            self._search_bar.Clear()
+            self._search_bar.SetQueryEditEnabled(False)
+
+        # We might use 'table' to extract the name of the local database,
+        # or call a function in '_source_panel'.
+        self.TitleRequested.emit("Local", "Local database")
+        self._filter_bar.clear()
+        self._status_bar.clearMessage()
+        self._table_model.SetTable(table)
+        self._item_model.SetTable(table)
+
     def _HandleSearchRequested(self, search):
+        (source, query) = (search["source"], search["query"])
+
         self._database_table.Clear()
         self._filter_bar.clear()
-        self.SearchStarted.emit(search)
-        self._fetcher.Fetch(TabContent._PLUGINS[search["source"]], search["query"], 50)
+        self.TitleRequested.emit(source, query)
+        self._fetcher.Fetch(TabContent._PLUGINS[source], query, 50)
 
     def _HandleFetchingStarted(self):
         self._status_bar.showMessage("Fetching…")
@@ -150,6 +180,8 @@ class TabContent(QWidget):
 class TabSystem(QTabWidget):
     LastTabClosed = Signal()
 
+    _DEFAULT_TEXT = "New Tab"
+
     _ICONS = {
         "INSPIRE": icons.INSPIRE,
         "arXiv": icons.ARXIV
@@ -173,8 +205,10 @@ class TabSystem(QTabWidget):
 
         # self.setFocusPolicy(Qt.NoFocus)
 
-        self._index = 0
         self._source_model = SourceModel()
+        self._memory_database = Database()
+
+        self._index = 0
 
     def _CloseTab(self, index):
         content = self.widget(index)
@@ -193,11 +227,11 @@ class TabSystem(QTabWidget):
 
     def AddTab(self, search=None):
         self._index = self._index + 1
-        new_tab = TabContent(self._index, self._source_model)
-        self.addTab(new_tab, "New Tab")
+        new_tab = TabContent(self._index, self._source_model, self._memory_database)
+        self.addTab(new_tab, TabSystem._DEFAULT_TEXT)
 
         new_tab.NewTabRequested.connect(self.AddTab)
-        new_tab.SearchStarted.connect(self.RenameTab)
+        new_tab.TitleRequested.connect(self.RenameTab)
 
         self.setCurrentWidget(new_tab)
 
@@ -206,7 +240,17 @@ class TabSystem(QTabWidget):
         if search is not None:
             new_tab.RunSearch(search)
 
-    def RenameTab(self, search):
+    def RenameTab(self, icon, text):
         index = self.indexOf(self.sender())
-        self.setTabIcon(index, QIcon(TabSystem._ICONS[search["source"]]))
-        self.setTabText(index, search["query"])
+
+        if icon == "":
+            icon = QIcon()
+        elif icon == "Local":
+            icon = QIcon.fromTheme("server-database")
+        else:
+            icon = QIcon(TabSystem._ICONS[icon])
+        self.setTabIcon(index, icon)
+
+        if text == "":
+            text = TabSystem._DEFAULT_TEXT
+        self.setTabText(index, text)

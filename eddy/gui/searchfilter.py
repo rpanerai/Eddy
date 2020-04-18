@@ -32,8 +32,14 @@ class SearchBar(QWidget):
 
         self.setFocusProxy(self._query_edit)
 
+    def Clear(self):
+        self._query_edit.clear()
+
     def SetStopEnabled(self, bool_):
         self._kill_button.setEnabled(bool_)
+
+    def SetQueryEditEnabled(self, bool_):
+        self._query_edit.setEnabled(bool_)
 
     def LaunchQuery(self, query):
         self._query_edit.setText(query)

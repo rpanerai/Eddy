@@ -5,12 +5,15 @@ from PySide2.QtCore import QObject, Signal
 
 
 class Database(QObject):
-    def __init__(self, parent=None):
+    def __init__(self, file=":memory:", parent=None):
         super(Database, self).__init__(parent)
-        self.connection = sqlite3.connect(":memory:")
 
+        self._file = file
+        self.connection = sqlite3.connect(self._file, isolation_level=None)
 
-DATABASE_IN_MEMORY = Database()
+    def __del__(self):
+        self.connection.close()
+        print("Closing connection to database '" + self._file + "'")
 
 
 class Table(QObject):
@@ -42,15 +45,19 @@ class Table(QObject):
         "dois": json.loads
     }
 
-    def __init__(self, database, name, parent=None):
+    def __init__(self, database, name, drop_on_del=False, parent=None):
         super(Table, self).__init__(parent)
 
+        self._database = database
         self._connection = database.connection
         self._name = name
+        self._drop_on_del = drop_on_del
 
     def __del__(self):
-        cursor = self._connection.cursor()
-        cursor.execute("DROP TABLE IF EXISTS " + self._name)
+        if self._drop_on_del:
+            cursor = self._connection.cursor()
+            cursor.execute("DROP TABLE IF EXISTS " + self._name)
+            print("Dropping table '" + self._name + "'")
 
     def Clear(self):
         cursor = self._connection.cursor()

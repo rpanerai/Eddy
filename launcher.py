@@ -1,8 +1,8 @@
 import sys
 import os
 
-DEVPATH = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, DEVPATH)
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ROOT_DIR)
 
 from eddy.main import run
 
