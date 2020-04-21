@@ -2,15 +2,17 @@ import os
 import webbrowser
 from functools import partial
 
-from PySide2.QtCore import Qt, Signal, QAbstractItemModel, QItemSelectionModel, QModelIndex
+from PySide2.QtCore import (
+    Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex
+)
 from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QTreeView, QHeaderView, QMenu
+from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu
 
 from eddy.icons import icons
 
 
 class TableModel(QAbstractItemModel):
-    SelectionRequested = Signal(QModelIndex)
+    SelectionRequested = Signal(list)
 
     HEADERS = (
         "Date",
@@ -36,9 +38,9 @@ class TableModel(QAbstractItemModel):
 
         self._table = None
         self._model = []
+        self._ids = []
+        self._ids_dict = {}
         self._model_map = []
-
-        self._selected_id = None
 
         self._sort_key = "id"
         self._sort_order = "ASC"
@@ -73,9 +75,6 @@ class TableModel(QAbstractItemModel):
 
         if role == Qt.TextAlignmentRole:
             return TableModel._TEXT_ALIGNMENT[TableModel.HEADERS[index.column()]]
-
-        #if role == Qt.ForegroundRole:
-        #    return QColor(Qt.red)
 
         return None
 
@@ -113,8 +112,9 @@ class TableModel(QAbstractItemModel):
     def Clear(self):
         self.beginResetModel()
         self._model = []
+        self._ids = []
+        self._ids_dict = {}
         self._model_map = []
-        self._selected_id = None
         self.endResetModel()
 
     def Update(self):
@@ -129,10 +129,11 @@ class TableModel(QAbstractItemModel):
             d["citations"]
         ] for d in data]
 
+        ids = self._table.GetTable(("id",))
+        self._ids_dict = dict((v, i) for i, v in enumerate([d["id"] for d in ids]))
+
         self._CreateSortFilterMap()
         self.endResetModel()
-
-        self._RequestSelection()
 
     def Filter(self, filter_strings):
         self._filter_strings = filter_strings
@@ -144,19 +145,11 @@ class TableModel(QAbstractItemModel):
         self._CreateSortFilterMap()
         self.endResetModel()
 
-        self._RequestSelection()
-
-    def SetSelectedRow(self, row):
-        if row is None:
-            self._selected_id = None
-        else:
-            self._selected_id = self._model_map[row]
-
     def IsVisible(self, id_):
         return id_ in self._model_map
 
     def GetId(self, row):
-        return self._model_map[row]
+        return self._ids[row]
 
     def GetArXivId(self, row):
         return self._table.GetRecord(self.GetId(row), ("arxiv_id",))["arxiv_id"]
@@ -167,6 +160,12 @@ class TableModel(QAbstractItemModel):
     def GetDOIs(self, row):
         return self._table.GetRecord(self.GetId(row), ("dois",))["dois"]
 
+    def FilterSelection(self, ids):
+        return [i for i in ids if i in self._ids]
+    
+    def IndicesFromIds(self, ids):
+        return [self.index(self._ids.index(i), 0) for i in ids]
+
     def _CreateSortFilterMap(self):
         ids = self._table.GetTable(
             ("id",),
@@ -174,14 +173,8 @@ class TableModel(QAbstractItemModel):
             self._sort_order,
             self._filter_strings
         )
-
-        self._model_map = [d["id"] for d in ids]
-
-    def _RequestSelection(self):
-        if self._selected_id in self._model_map:
-            self.SelectionRequested.emit(self.index(self._model_map.index(self._selected_id), 0))
-        else:
-            self.SelectionRequested.emit(QModelIndex())
+        self._ids = [d["id"] for d in ids]
+        self._model_map = [self._ids_dict[i] for i in self._ids]
 
     @staticmethod
     def _FormatAuthors(authors):
@@ -191,8 +184,6 @@ class TableModel(QAbstractItemModel):
 class TableView(QTreeView):
     ItemSelected = Signal(int)
     NewTabRequested = Signal(dict)
-
-    _PERSISTENT_SELECTION_MODE = False
 
     def __init__(self, parent=None):
         super(TableView, self).__init__(parent)
@@ -215,18 +206,47 @@ class TableView(QTreeView):
 
         self._column_visibility = {}
 
-        self._automatic_selection = False
+        self.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+
+        self._selected_ids = []
+        
+        # self.setDragDropMode(QAbstractItemView.DragOnly)
 
     def setModel(self, model):
         if self.model() is not None:
-            model.SelectionRequested.disconnect(self._HandleSelectionRequested)
+            model.modelAboutToBeReset.disconnect(self._SaveSelection)
+            model.modelReset.disconnect(self._RestoreSelection)
 
         super(TableView, self).setModel(model)
 
-        model.SelectionRequested.connect(self._HandleSelectionRequested)
+        model.modelAboutToBeReset.connect(self._SaveSelection)
+        model.modelReset.connect(self._RestoreSelection)
 
         self._ResetColumnsSize()
         self._ResizeColumnsAtGeometryChange()
+
+    def _SaveSelection(self):
+        self._selected_ids = [
+            self.model().GetId(r.row()) for r in self.selectionModel().selectedRows()
+        ]
+
+    def _RestoreSelection(self):
+        # I have no idea why this does not work if executed at the end of reset(),
+        # which, by the way, is triggered by the same signal!
+        ids = self.model().FilterSelection(self._selected_ids)
+        indices = self.model().IndicesFromIds(ids)
+
+        if indices == []:
+            return
+
+        selection = QItemSelection()
+        for i in indices:
+            selection.select(i, i)
+        self.selectionModel().select(
+            selection,
+            QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
+        )
 
     def reset(self):
         super(TableView, self).reset()
@@ -240,17 +260,11 @@ class TableView(QTreeView):
     def selectionChanged(self, selected, deselected):
         super(TableView, self).selectionChanged(selected, deselected)
 
-        if self._automatic_selection:
-            return
-
-        rows = self.selectionModel().selectedRows()
-        if rows == []:
-            self.model().SetSelectedRow(None)
-            self.ItemSelected.emit(-1)
+        rows = [r.row() for r in self.selectionModel().selectedRows()]
+        if len(rows) == 1:
+            self.ItemSelected.emit(self.model().GetId(rows[0]))
         else:
-            row = rows[0].row()
-            self.model().SetSelectedRow(row)
-            self.ItemSelected.emit(self.model().GetId(row))
+            self.ItemSelected.emit(-1)
 
     def _HandleRightClickOnHeader(self, position):
         menu = QMenu()
@@ -311,22 +325,6 @@ class TableView(QTreeView):
                 action_doi_link.triggered.connect(partial(self._OpenURL, u))
 
         menu.exec_(self.viewport().mapToGlobal(position))
-
-    def _HandleSelectionRequested(self, index):
-        selection_model = self.selectionModel()
-        selection_model.clearCurrentIndex()
-
-        if not index.isValid():
-            if not TableView._PERSISTENT_SELECTION_MODE:
-                self.model().SetSelectedRow(None)
-                self.ItemSelected.emit(-1)
-        else:
-            self._automatic_selection = True
-            selection_model.select(
-                index,
-                QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
-            )
-            self._automatic_selection = False
 
     def _SetColumnVisibility(self):
         for (i, h) in enumerate(TableModel.HEADERS):
