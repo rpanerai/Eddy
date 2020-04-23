@@ -234,11 +234,17 @@ class TableView(QTreeView):
     def _RestoreSelection(self):
         # I have no idea why this does not work if executed at the end of reset(),
         # which, by the way, is triggered by the same signal!
-        ids = self.model().FilterSelection(self._selected_ids)
-        indices = self.model().IndicesFromIds(ids)
 
-        if indices == []:
+        if self._selected_ids == []:
             return
+
+        ids = self.model().FilterSelection(self._selected_ids)
+
+        if ids == []:
+            self.ItemSelected.emit(-1)
+            return
+
+        indices = self.model().IndicesFromIds(ids)
 
         selection = QItemSelection()
         for i in indices:
