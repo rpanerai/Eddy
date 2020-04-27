@@ -20,51 +20,9 @@ class InspirePlugin():
         return request
 
     @staticmethod
-    def DecodeBatch(reply_string, base_id):
+    def DecodeBatch(reply_string):
         raw_data = json.loads(reply_string)
-        data = [{
-            "id": i + base_id,
-            "type": (
-                InspirePlugin._TYPES.get(d["metadata"]["document_type"][0], "")
-                if "document_type" in d["metadata"]
-                else ""
-            ),
-            # "date": d["metadata"]["legacy_creation_date"],
-            "date": d["metadata"]["earliest_date"],
-            "authors": [
-                a["full_name"]
-                for a in d["metadata"]["authors"]
-            ] if "authors" in d["metadata"] else [],
-            "title": d["metadata"]["titles"][0]["title"],
-            "abstract": (
-                d["metadata"]["abstracts"][0]["value"]
-                if "abstracts" in d["metadata"]
-                else ""
-            ),
-            "citations": d["metadata"]["citation_count"],
-            "journal": (
-                InspirePlugin._DecodeJournal(
-                    d["metadata"]["publication_info"][0]
-                )
-                if "publication_info" in d["metadata"]
-                else ""
-            ),
-            "inspire_id": d["id"],
-            "texkey": (
-                d["metadata"]["texkeys"][0]
-                if "texkeys" in d["metadata"]
-                else ""
-            ),
-            "arxiv_id": (
-                d["metadata"]["arxiv_eprints"][0]["value"]
-                if "arxiv_eprints" in d["metadata"]
-                else ""
-            ),
-            "dois": list({
-                i["value"]
-                for i in d["metadata"]["dois"]
-            }) if "dois" in d["metadata"] else []
-        } for (i, d) in enumerate(raw_data["hits"]["hits"])]
+        data = [InspirePlugin._DecodeEntry(d) for d in raw_data["hits"]["hits"]]
 
         total = raw_data["hits"]["total"]
 
@@ -99,4 +57,40 @@ class InspirePlugin():
         if "pubinfo_freetext" in pub_info:
             return pub_info["pubinfo_freetext"]
 
-        return ""
+        return None
+
+    @staticmethod
+    def _DecodeEntry(entry):
+        item = {}
+        data = entry["metadata"]
+
+        if "document_type" in data:
+            item["type"] = InspirePlugin._TYPES.get(data["document_type"][0], None)
+
+        item["date"] = data["earliest_date"]
+
+        if "authors" in data:
+            item["authors"] = [a["full_name"] for a in data["authors"]]
+
+        item["title"] = data["titles"][0]["title"]
+
+        if "abstracts" in data:
+            item["abstract"] = (data["abstracts"][0]["value"])
+
+        item["citations"] = data["citation_count"]
+
+        if "publication_info" in data:
+            item["journal"] = InspirePlugin._DecodeJournal(data["publication_info"][0])
+
+        item["inspire_id"] = entry["id"]
+
+        if "texkeys" in data:
+            item["texkey"] = data["texkeys"][0]
+
+        if "arxiv_eprints" in data:
+            item["arxiv_id"] = data["arxiv_eprints"][0]["value"]
+
+        if "dois" in data:
+            item["dois"] = list({i["value"] for i in data["dois"]})
+
+        return item

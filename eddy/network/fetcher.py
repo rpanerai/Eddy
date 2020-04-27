@@ -60,8 +60,7 @@ class Fetcher(QObject):
             reply_string = str(self._reply.readAll(), "utf-8")
             self._reply.deleteLater()
 
-            base_id = (self._page - 1) * self._batch_size
-            (data, total) = self._plugin.DecodeBatch(reply_string, base_id)
+            (data, total) = self._plugin.DecodeBatch(reply_string)
 
             records_found = len(data)
             if records_found > 0:

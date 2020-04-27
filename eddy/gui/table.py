@@ -288,6 +288,8 @@ class TableView(QTreeView):
         if not index.isValid():
             return
 
+        row = index.row()
+
         menu = QMenu()
         action_inspire_page = menu.addAction(QIcon(icons.INSPIRE), "Open INSPIRE page")
         action_arxiv_page = menu.addAction(QIcon(icons.ARXIV), "Open arXiv page")
@@ -297,8 +299,8 @@ class TableView(QTreeView):
         action_references = menu.addAction(QIcon.fromTheme("system-search"), "Find references")
         action_citations = menu.addAction(QIcon.fromTheme("system-search"), "Find citations")
 
-        arxiv_id = self.model().GetArXivId(index.row())
-        if arxiv_id == "":
+        arxiv_id = self.model().GetArXivId(row)
+        if arxiv_id == None:
             action_arxiv_page.setEnabled(False)
             action_arxiv_pdf.setEnabled(False)
         else:
@@ -307,12 +309,14 @@ class TableView(QTreeView):
             pdf_url = "https://arxiv.org/pdf/" + arxiv_id + ".pdf"
             action_arxiv_pdf.triggered.connect(partial(self._OpenPDF, pdf_url))
 
-        inspire_id = str(self.model().GetInspireId(index.row()))
-        if inspire_id == "":
+        inspire_id = self.model().GetInspireId(row)
+        if inspire_id == None:
             action_inspire_page.setEnabled(False)
             action_references.setEnabled(False)
             action_citations.setEnabled(False)
         else:
+            inspire_id = str(inspire_id)
+
             inspire_url = "https://labs.inspirehep.net/literature/" + inspire_id
             action_inspire_page.triggered.connect(partial(self._OpenURL, inspire_url))
 
@@ -322,7 +326,7 @@ class TableView(QTreeView):
             cit_search = {"source": "INSPIRE", "query": "refersto:recid:" + inspire_id}
             action_citations.triggered.connect(partial(self.NewTabRequested.emit, cit_search))
 
-        dois = self.model().GetDOIs(index.row())
+        dois = self.model().GetDOIs(row)
         if dois == []:
             action_doi_link.setEnabled(False)
         else:

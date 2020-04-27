@@ -35,6 +35,20 @@ class Table(QObject):
         "dois": "TEXT"
     }
 
+    _DEFAULTS = {
+        "type": None,
+        "date": None,
+        "authors": [],
+        "title": None,
+        "abstract": None,
+        "journal": None,
+        "citations": None,
+        "inspire_id": None,
+        "texkey": None,
+        "arxiv_id": None,
+        "dois": []
+    }
+
     _ENCODE_FUNCTIONS = {
         "authors": json.dumps,
         "dois": json.dumps
@@ -69,12 +83,15 @@ class Table(QObject):
         self.Cleared.emit()
 
     def AddData(self, data):
-        placeholder = "(" + ', '.join('?' * len(Table._KEYS))+ ")"
-        query = "INSERT INTO " + self._name + " VALUES " + placeholder
+        keys = self._DEFAULTS.keys()
+
+        keys_str = "(" + ', '.join(keys) + ")"
+        placeholder = "(" + ', '.join('?' * len(keys)) + ")"
+        query = "INSERT INTO " + self._name + keys_str + " VALUES " + placeholder
         values = [
             tuple([
-                Table._ENCODE_FUNCTIONS.get(k, lambda x: x)(d[k])
-                for k in Table._KEYS
+                Table._ENCODE_FUNCTIONS.get(k, lambda x: x)(d.get(k, self._DEFAULTS[k]))
+                for k in keys
             ])
             for d in data
         ]
