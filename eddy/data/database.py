@@ -100,6 +100,15 @@ class Table(QObject):
 
         self.Updated.emit()
 
+    def Delete(self, ids):
+        query = "DELETE FROM " + self._name + " WHERE id = ?"
+        ids = [(i,) for i in ids]
+        
+        cursor = self._connection.cursor()
+        cursor.executemany(query, ids)
+
+        self.Updated.emit()
+
     def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=()):
         query = "SELECT " + ", ".join(keys) + " FROM " + self._name
         for i, s in enumerate(filter_strings):

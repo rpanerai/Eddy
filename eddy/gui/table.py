@@ -166,6 +166,10 @@ class TableModel(QAbstractItemModel):
     def IndicesFromIds(self, ids):
         return [self.index(self._ids.index(i), 0) for i in ids]
 
+    def DeleteRows(self, rows):
+        ids = [self._ids[r] for r in rows]
+        self._table.Delete(ids)
+
     def _CreateSortFilterMap(self):
         ids = self._table.GetTable(
             ("id",),
@@ -298,6 +302,8 @@ class TableView(QTreeView):
         menu.addSeparator()
         action_references = menu.addAction(QIcon.fromTheme("system-search"), "Find references")
         action_citations = menu.addAction(QIcon.fromTheme("system-search"), "Find citations")
+        menu.addSeparator()
+        action_delete = menu.addAction(QIcon.fromTheme("edit-delete"), "Remove")
 
         arxiv_id = self.model().GetArXivId(row)
         if arxiv_id == None:
@@ -333,6 +339,8 @@ class TableView(QTreeView):
             doi_urls = ("https://doi.org/" + s for s in dois)
             for u in doi_urls:
                 action_doi_link.triggered.connect(partial(self._OpenURL, u))
+
+        action_delete.triggered.connect(partial(self.model().DeleteRows, (row,)))
 
         menu.exec_(self.viewport().mapToGlobal(position))
 
