@@ -288,13 +288,31 @@ class TableView(QTreeView):
         menu.exec_(self.mapToGlobal(position))
 
     def _HandleRightClickOnItem(self, position):
-        index = self.indexAt(position)
-        if not index.isValid():
+        # index = self.indexAt(position)
+        # if not index.isValid():
+        #     return
+        # row = index.row()
+
+        rows = [r.row() for r in self.selectionModel().selectedRows()]
+        if rows == []:
             return
 
-        row = index.row()
+        menu = self._ContextMenu(rows)
+        menu.exec_(self.viewport().mapToGlobal(position))
 
+    def _ContextMenu(self, rows):
         menu = QMenu()
+
+        if len(rows) > 1:
+            action_delete = menu.addAction(
+                QIcon.fromTheme("edit-delete"),
+                "Remove " + str(len(rows)) + " items"
+            )
+            action_delete.triggered.connect(partial(self.model().DeleteRows, rows))
+            return menu
+
+        row = rows[0]
+        
         action_inspire_page = menu.addAction(QIcon(icons.INSPIRE), "Open INSPIRE page")
         action_arxiv_page = menu.addAction(QIcon(icons.ARXIV), "Open arXiv page")
         action_arxiv_pdf = menu.addAction(QIcon.fromTheme("viewpdf"), "Open arXiv PDF")
@@ -342,7 +360,7 @@ class TableView(QTreeView):
 
         action_delete.triggered.connect(partial(self.model().DeleteRows, (row,)))
 
-        menu.exec_(self.viewport().mapToGlobal(position))
+        return menu
 
     def _SetColumnVisibility(self):
         for (i, h) in enumerate(TableModel.HEADERS):
