@@ -3,7 +3,7 @@ from functools import partial
 from PySide2.QtCore import Signal
 from PySide2.QtGui import Qt, QIcon
 from PySide2.QtWidgets import (
-    QWidget, QVBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar, QSizePolicy,
+    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar, QSizePolicy,
     QPushButton
 )
 
@@ -86,6 +86,8 @@ class TabContent(QWidget):
 
     def _SetupUI(self):
         main_layout = QVBoxLayout()
+        search_filter_widget = QWidget()
+        search_filter_layout = QHBoxLayout(search_filter_widget)
         central_widget = QWidget()
         central_layout = QVBoxLayout(central_widget)
 
@@ -106,8 +108,11 @@ class TabContent(QWidget):
         panel_splitter.setSizes([80, panel_splitter.width() - 80])
         panel_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
-        central_layout.addWidget(self._search_bar)
-        central_layout.addWidget(self._filter_bar)
+        search_filter_layout.addWidget(self._search_bar)
+        search_filter_layout.addWidget(self._filter_bar)
+        search_filter_layout.setContentsMargins(0, 0, 0, 0)
+
+        central_layout.addWidget(search_filter_widget)
         central_layout.addWidget(item_splitter)
         central_layout.setContentsMargins(0, 0, 0, 0)
 

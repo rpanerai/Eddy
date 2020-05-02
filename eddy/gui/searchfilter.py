@@ -2,7 +2,7 @@
 
 from PySide2.QtCore import Signal
 from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLineEdit
+from PySide2.QtWidgets import QWidget, QHBoxLayout, QToolButton, QLineEdit
 
 
 class SearchBar(QWidget):
@@ -16,10 +16,12 @@ class SearchBar(QWidget):
         self._query_edit.setClearButtonEnabled(True)
         self._query_edit.setPlaceholderText("Type you query here")
         self._query_edit.returnPressed.connect(self._HandleReturnPressed)
+        self._query_edit.addAction(QIcon.fromTheme("system-search"), QLineEdit.LeadingPosition)
 
-        self._kill_button = QPushButton(QIcon.fromTheme("process-stop"), "")
-        self._kill_button.setFlat(True)
-        self._kill_button.setMaximumSize(31, 31)
+        self._kill_button = QToolButton()
+        self._kill_button.setIcon(QIcon.fromTheme("edit-delete-remove"))
+        self._kill_button.setAutoRaise(True)
+        self._kill_button.setMinimumSize(31, 31)
         self._kill_button.setEnabled(False)
         self._kill_button.clicked.connect(self.StopPressed)
 
@@ -63,6 +65,7 @@ class FilterBar(QLineEdit):
         self.setClearButtonEnabled(True)
         self.setPlaceholderText("Filter authors and titles")
         self.textChanged.connect(self._HandleTextChanged)
+        self.addAction(QIcon.fromTheme("view-filter"), QLineEdit.LeadingPosition)
 
     def _HandleTextChanged(self, text):
         filter_strings = text.split()
