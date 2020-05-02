@@ -1,6 +1,8 @@
+import json
+
 from PySide2.QtCore import Signal, QItemSelectionModel
 from PySide2.QtGui import QIcon, QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QTreeView
+from PySide2.QtWidgets import QTreeView, QAbstractItemView
 
 from paths import ROOT_DIR, LOCAL_DATABASES
 from eddy.icons import icons
@@ -16,16 +18,21 @@ class SourceModel(QStandardItemModel):
         web_search = QStandardItem(QIcon.fromTheme("globe"), "Web Search")
         web_search.setEditable(False)
         web_search.setSelectable(False)
+        web_search.setDropEnabled(False)
         local = QStandardItem(QIcon.fromTheme("drive-harddisk"), "Local")
         local.setEditable(False)
         local.setSelectable(False)
+        local.setDropEnabled(False)
 
         inspire = QStandardItem(QIcon(icons.INSPIRE), "INSPIRE")
         inspire.setEditable(False)
+        inspire.setDropEnabled(False)
         # inspire_ac = QStandardItem(QIcon(icons.INSPIRE), "ac < 10")
         # inspire_ac.setEditable(False)
+        # inspire_ac.setDropEnabled(False)
         arxiv = QStandardItem(QIcon(icons.ARXIV), "arXiv")
         arxiv.setEditable(False)
+        arxiv.setDropEnabled(False)
 
         self._ITEMS = {
             "INSPIRE": inspire,
@@ -46,6 +53,28 @@ class SourceModel(QStandardItemModel):
         web_search.appendRow(arxiv)
         root.appendRow(local)
 
+    def mimeTypes(self):
+        return ["application/x-eddy"]
+
+    def canDropMimeData(self, data, action, row, column, parent):
+        # We could implement additional logic to prevent self-drops.
+
+        if (row, column) != (-1, -1):
+            return False
+        if not parent.isValid():
+            return False
+        # Drop only on valid indices, where parent is the index and row = column = -1.
+        return True
+
+    def dropMimeData(self, data, action, row, column, parent):
+        self.itemFromIndex(parent)
+        table = self._TABLES[self.itemFromIndex(parent).text()]
+
+        records = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))
+        table.AddData(records)
+
+        return True
+
 
 class SourcePanel(QTreeView):
     SearchRequested = Signal(dict)
@@ -61,6 +90,8 @@ class SourcePanel(QTreeView):
         # self.viewport().setAutoFillBackground(False)
         self.setWordWrap(True)
         self.setHeaderHidden(True)
+
+        self.setDragDropMode(QAbstractItemView.DropOnly)
 
         self._selected_source = None
 
@@ -81,7 +112,7 @@ class SourcePanel(QTreeView):
         # For the moment, it does not seem to be necessary to read
         # the value returned by the original implementation.
         # It might turn out to be useful in the following, where we might not want to
-        # automatically respont to any event associated to a selectable index with a Select flag
+        # automatically respond to any event associated to a selectable index with a Select flag
         # (e.g. a request for a context menu).
 
         if not index.isValid():

@@ -127,7 +127,7 @@ class Table(QObject):
 
         return data
 
-    def GetRecord(self, id_, keys):
+    def GetRecord(self, id_, keys=_DEFAULTS.keys()):
         query = "SELECT " + ", ".join(keys) + " FROM " + self._name + " WHERE id = " + str(id_)
 
         cursor = self._connection.cursor()

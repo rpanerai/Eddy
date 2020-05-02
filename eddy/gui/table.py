@@ -1,12 +1,14 @@
 import os
 import webbrowser
 from functools import partial
+import json
 
 from PySide2.QtCore import (
-    Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex
+    Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex, QMimeData,
+    QByteArray
 )
-from PySide2.QtGui import QIcon
-from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu
+from PySide2.QtGui import QIcon, QDrag
+from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel
 
 from eddy.icons import icons
 
@@ -78,6 +80,12 @@ class TableModel(QAbstractItemModel):
 
         return None
 
+    def flags(self, index):
+        if not index.isValid():
+            return 0
+
+        return Qt.ItemIsDragEnabled | super(TableModel, self).flags(index)
+
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Orientation.Horizontal:
             return TableModel.HEADERS[section]
@@ -96,6 +104,17 @@ class TableModel(QAbstractItemModel):
         self.layoutChanged.emit()
 
         self._RequestSelection()
+
+    def mimeTypes(self):
+        return ["application/x-eddy"]
+
+    def mimeData(self, indexes):
+        ids = [self._ids[r] for r in list({i.row() for i in indexes})]
+        records = [self._table.GetRecord(i) for i in ids]
+
+        data = QMimeData()
+        data.setData(self.mimeTypes()[0], QByteArray(json.dumps(records).encode("utf-8")))
+        return data
 
     def SetTable(self, database_table):
         if self._table is not None:
@@ -162,7 +181,7 @@ class TableModel(QAbstractItemModel):
 
     def FilterSelection(self, ids):
         return [i for i in ids if i in self._ids]
-    
+
     def IndicesFromIds(self, ids):
         return [self.index(self._ids.index(i), 0) for i in ids]
 
@@ -214,8 +233,8 @@ class TableView(QTreeView):
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         self._selected_ids = []
-        
-        # self.setDragDropMode(QAbstractItemView.DragOnly)
+
+        self.setDragDropMode(QAbstractItemView.DragOnly)
 
     def setModel(self, model):
         if self.model() is not None:
@@ -229,34 +248,6 @@ class TableView(QTreeView):
 
         self._ResetColumnsSize()
         self._ResizeColumnsAtGeometryChange()
-
-    def _SaveSelection(self):
-        self._selected_ids = [
-            self.model().GetId(r.row()) for r in self.selectionModel().selectedRows()
-        ]
-
-    def _RestoreSelection(self):
-        # I have no idea why this does not work if executed at the end of reset(),
-        # which, by the way, is triggered by the same signal!
-
-        if self._selected_ids == []:
-            return
-
-        ids = self.model().FilterSelection(self._selected_ids)
-
-        if ids == []:
-            self.ItemSelected.emit(-1)
-            return
-
-        indices = self.model().IndicesFromIds(ids)
-
-        selection = QItemSelection()
-        for i in indices:
-            selection.select(i, i)
-        self.selectionModel().select(
-            selection,
-            QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
-        )
 
     def reset(self):
         super(TableView, self).reset()
@@ -275,6 +266,53 @@ class TableView(QTreeView):
             self.ItemSelected.emit(self.model().GetId(rows[0]))
         else:
             self.ItemSelected.emit(-1)
+
+    def startDrag(self, supportedActions):
+        # We reimplement this to visualize a tooltip instead of entire rows while dragging.
+        
+        rows = self.selectionModel().selectedRows()
+        data = self.model().mimeData(rows)
+
+        label = QLabel(str(len(rows)) + " items" if len(rows) > 1 else "1 item")
+        label.setStyleSheet(
+            "font-weight: bold; color : white; background-color : black; border: 1px solid grey"
+        )
+        pixmap = label.grab()
+        pixmap.rect().adjust(10,10,0,0)
+        
+        drag = QDrag(self)
+        drag.setPixmap(pixmap)
+        # drag.setDragCursor(pixmap, Qt.CopyAction)
+        drag.setMimeData(data)
+        drag.setHotSpot(pixmap.rect().center())
+        drag.exec_(Qt.CopyAction)
+
+    def _SaveSelection(self):
+        self._selected_ids = [
+            self.model().GetId(r.row()) for r in self.selectionModel().selectedRows()
+        ]
+
+    def _RestoreSelection(self):
+        # I have no idea why this does not work if executed at the end of reset(),
+        # which, by the way, is triggered by the same signal!
+
+        if self._selected_ids == []:
+            return
+
+        ids = self.model().FilterSelection(self._selected_ids)
+        if ids == []:
+            self.ItemSelected.emit(-1)
+            return
+
+        indices = self.model().IndicesFromIds(ids)
+
+        selection = QItemSelection()
+        for i in indices:
+            selection.select(i, i)
+        self.selectionModel().select(
+            selection,
+            QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
+        )
 
     def _HandleRightClickOnHeader(self, position):
         menu = QMenu()
@@ -312,7 +350,7 @@ class TableView(QTreeView):
             return menu
 
         row = rows[0]
-        
+
         action_inspire_page = menu.addAction(QIcon(icons.INSPIRE), "Open INSPIRE page")
         action_arxiv_page = menu.addAction(QIcon(icons.ARXIV), "Open arXiv page")
         action_arxiv_pdf = menu.addAction(QIcon.fromTheme("viewpdf"), "Open arXiv PDF")
