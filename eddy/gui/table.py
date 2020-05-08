@@ -343,7 +343,7 @@ class TableView(QTreeView):
 
         if len(rows) > 1:
             action_delete = menu.addAction(
-                QIcon.fromTheme("edit-delete"),
+                QIcon(icons.DELETE),
                 "Remove " + str(len(rows)) + " items"
             )
             action_delete.triggered.connect(partial(self.model().DeleteRows, rows))
@@ -353,13 +353,13 @@ class TableView(QTreeView):
 
         action_inspire_page = menu.addAction(QIcon(icons.INSPIRE), "Open INSPIRE page")
         action_arxiv_page = menu.addAction(QIcon(icons.ARXIV), "Open arXiv page")
-        action_arxiv_pdf = menu.addAction(QIcon.fromTheme("viewpdf"), "Open arXiv PDF")
+        action_arxiv_pdf = menu.addAction(QIcon(icons.PDF), "Open arXiv PDF")
         action_doi_link = menu.addAction(QIcon(icons.DOI), "Open DOI links")
         menu.addSeparator()
-        action_references = menu.addAction(QIcon.fromTheme("system-search"), "Find references")
-        action_citations = menu.addAction(QIcon.fromTheme("system-search"), "Find citations")
+        action_references = menu.addAction(QIcon(icons.SEARCH), "Find references")
+        action_citations = menu.addAction(QIcon(icons.SEARCH), "Find citations")
         menu.addSeparator()
-        action_delete = menu.addAction(QIcon.fromTheme("edit-delete"), "Remove")
+        action_delete = menu.addAction(QIcon(icons.DELETE), "Remove")
 
         arxiv_id = self.model().GetArXivId(row)
         if arxiv_id == None:

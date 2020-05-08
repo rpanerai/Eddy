@@ -15,11 +15,11 @@ class SourceModel(QStandardItemModel):
 
         root = self.invisibleRootItem()
 
-        web_search = QStandardItem(QIcon.fromTheme("globe"), "Web Search")
+        web_search = QStandardItem(QIcon(icons.WEB), "Web Search")
         web_search.setEditable(False)
         web_search.setSelectable(False)
         web_search.setDropEnabled(False)
-        local = QStandardItem(QIcon.fromTheme("drive-harddisk"), "Local")
+        local = QStandardItem(QIcon(icons.LOCAL), "Local")
         local.setEditable(False)
         local.setSelectable(False)
         local.setDropEnabled(False)
@@ -43,7 +43,7 @@ class SourceModel(QStandardItemModel):
         self._TABLES = {}
         for (n, p) in LOCAL_DATABASES.items():
             self._TABLES[n] = Table(Database(p), "tab")
-            i = QStandardItem(QIcon.fromTheme("server-database"), n)
+            i = QStandardItem(QIcon(icons.DATABASE), n)
             i.setEditable(False)
             local.appendRow(i)
 

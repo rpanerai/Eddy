@@ -3,8 +3,8 @@ from functools import partial
 from PySide2.QtCore import Signal
 from PySide2.QtGui import Qt, QIcon
 from PySide2.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar, QSizePolicy,
-    QPushButton
+    QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar,
+    QSizePolicy, QPushButton
 )
 
 from eddy.network.fetcher import Fetcher
@@ -202,7 +202,7 @@ class TabSystem(QTabWidget):
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self._CloseTab)
 
-        new_tab_button = QPushButton(QIcon.fromTheme("tab-new"), "")
+        new_tab_button = QPushButton(QIcon(icons.TAB_NEW), "")
         new_tab_button.clicked.connect(partial(self.AddTab, None))
         self.setCornerWidget(new_tab_button, Qt.Corner.TopLeftCorner)
 
@@ -251,7 +251,7 @@ class TabSystem(QTabWidget):
         if icon == "":
             icon = QIcon()
         elif icon == "Local":
-            icon = QIcon.fromTheme("server-database")
+            icon = QIcon(icons.DATABASE)
         else:
             icon = QIcon(TabSystem._ICONS[icon])
         self.setTabIcon(index, icon)
