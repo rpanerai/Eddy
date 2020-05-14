@@ -11,6 +11,7 @@ from PySide2.QtGui import QIcon, QDrag
 from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel
 
 from eddy.icons import icons
+from eddy.gui.source import SearchRequest
 
 
 class TableModel(QAbstractItemModel):
@@ -274,6 +275,7 @@ class TableView(QTreeView):
         data = self.model().mimeData(rows)
 
         label = QLabel(str(len(rows)) + " items" if len(rows) > 1 else "1 item")
+        # Use QPalette.ColorRole?
         label.setStyleSheet(
             "font-weight: bold; color : white; background-color : black; border: 1px solid grey"
         )
@@ -382,10 +384,10 @@ class TableView(QTreeView):
             inspire_url = "https://labs.inspirehep.net/literature/" + inspire_id
             action_inspire_page.triggered.connect(partial(self._OpenURL, inspire_url))
 
-            ref_search = {"source": "INSPIRE", "query": "citedby:recid:" + inspire_id}
+            ref_search = SearchRequest(source="INSPIRE", query="citedby:recid:" + inspire_id)
             action_references.triggered.connect(partial(self.NewTabRequested.emit, ref_search))
 
-            cit_search = {"source": "INSPIRE", "query": "refersto:recid:" + inspire_id}
+            cit_search = SearchRequest(source="INSPIRE", query="refersto:recid:" + inspire_id)
             action_citations.triggered.connect(partial(self.NewTabRequested.emit, cit_search))
 
         dois = self.model().GetDOIs(row)

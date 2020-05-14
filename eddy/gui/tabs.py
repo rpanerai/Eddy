@@ -1,31 +1,22 @@
-from functools import partial
-
 from PySide2.QtCore import Signal
 from PySide2.QtGui import Qt, QIcon
 from PySide2.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar,
-    QSizePolicy, QPushButton
+    QSizePolicy, QToolButton
 )
 
 from eddy.network.fetcher import Fetcher
-from eddy.network.inspire import InspirePlugin
-from eddy.network.arxiv import ArXivPlugin
 from eddy.data.database import Database, Table
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemModel, ItemView
 from eddy.gui.searchfilter import SearchBar, FilterBar
-from eddy.gui.source import SourceModel, SourcePanel
+from eddy.gui.source import SearchRequest, SourceModel, SourcePanel
 from eddy.icons import icons
 
 
 class TabContent(QWidget):
-    NewTabRequested = Signal(dict)
-    TitleRequested = Signal(str, str)
-
-    _PLUGINS = {
-        "INSPIRE": InspirePlugin,
-        "arXiv": ArXivPlugin
-    }
+    NewTabRequested = Signal(SearchRequest)
+    TitleRequested = Signal((str, str), ())
 
     def __init__(self, index, source_model, memory_database, parent=None):
         super(TabContent, self).__init__(parent)
@@ -77,9 +68,9 @@ class TabContent(QWidget):
 
         self.setFocusProxy(self._search_bar)
 
-    def RunSearch(self, search):
-        self._source_panel.SelectSource(search["source"])
-        self._search_bar.LaunchQuery(search["query"])
+    def RunSearch(self, search_request):
+        self._source_panel.SelectSource(search_request.source)
+        self._search_bar.LaunchQuery(search_request.query)
 
     def StopFetching(self):
         self._fetcher.Stop()
@@ -125,34 +116,30 @@ class TabContent(QWidget):
             return
 
         self._web_source_active = True
-        self.TitleRequested.emit("", "")
+        self.TitleRequested[()].emit()
         self._search_bar.SetQueryEditEnabled(True)
         self._filter_bar.clear()
         self._database_table.Clear()
         self._table_model.SetTable(self._database_table)
         self._item_model.SetTable(self._database_table)
 
-    def _HandleLocalSourceSelected(self, table):
+    def _HandleLocalSourceSelected(self, source):
         if self._web_source_active:
             self._web_source_active = False
             self._search_bar.Clear()
             self._search_bar.SetQueryEditEnabled(False)
 
-        # We might use 'table' to extract the name of the local database,
-        # or call a function in '_source_panel'.
-        self.TitleRequested.emit("Local", "Local database")
+        self.TitleRequested.emit(icons.DATABASE, source.name)
         self._filter_bar.clear()
         self._status_bar.clearMessage()
-        self._table_model.SetTable(table)
-        self._item_model.SetTable(table)
+        self._table_model.SetTable(source.table)
+        self._item_model.SetTable(source.table)
 
     def _HandleSearchRequested(self, search):
-        (source, query) = (search["source"], search["query"])
-
         self._database_table.Clear()
         self._filter_bar.clear()
-        self.TitleRequested.emit(source, query)
-        self._fetcher.Fetch(TabContent._PLUGINS[source], query, 50)
+        self.TitleRequested.emit(search.icon, search.query)
+        self._fetcher.Fetch(search.plugin, search.query, 50)
 
     def _HandleFetchingStarted(self):
         self._status_bar.showMessage("Fetching…")
@@ -187,11 +174,6 @@ class TabSystem(QTabWidget):
 
     _DEFAULT_TEXT = "New Tab"
 
-    _ICONS = {
-        "INSPIRE": icons.INSPIRE,
-        "arXiv": icons.ARXIV
-    }
-
     def __init__(self, parent=None):
         super(TabSystem, self).__init__(parent)
 
@@ -202,8 +184,9 @@ class TabSystem(QTabWidget):
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self._CloseTab)
 
-        new_tab_button = QPushButton(QIcon(icons.TAB_NEW), "")
-        new_tab_button.clicked.connect(partial(self.AddTab, None))
+        new_tab_button = QToolButton()
+        new_tab_button.setIcon(QIcon(icons.TAB_NEW))
+        new_tab_button.clicked.connect(self.AddTab)
         self.setCornerWidget(new_tab_button, Qt.Corner.TopLeftCorner)
 
         self.setMovable(True)
@@ -230,32 +213,24 @@ class TabSystem(QTabWidget):
     def CloseCurrentTab(self):
         self._CloseTab(self.currentIndex())
 
-    def AddTab(self, search=None):
+    def AddTab(self, search_request=False):
         self._index = self._index + 1
         new_tab = TabContent(self._index, self._source_model, self._memory_database)
         self.addTab(new_tab, TabSystem._DEFAULT_TEXT)
 
         new_tab.NewTabRequested.connect(self.AddTab)
-        new_tab.TitleRequested.connect(self.RenameTab)
+        new_tab.TitleRequested[str, str].connect(self.RenameTab)
+        new_tab.TitleRequested[()].connect(self.RenameTab)
 
         self.setCurrentWidget(new_tab)
 
         new_tab.setFocus()
 
-        if search is not None:
-            new_tab.RunSearch(search)
+        if search_request:
+            new_tab.RunSearch(search_request)
 
-    def RenameTab(self, icon, text):
+    def RenameTab(self, icon=QIcon(), text=_DEFAULT_TEXT):
         index = self.indexOf(self.sender())
 
-        if icon == "":
-            icon = QIcon()
-        elif icon == "Local":
-            icon = QIcon(icons.DATABASE)
-        else:
-            icon = QIcon(TabSystem._ICONS[icon])
-        self.setTabIcon(index, icon)
-
-        if text == "":
-            text = TabSystem._DEFAULT_TEXT
+        self.setTabIcon(index, QIcon(icon))
         self.setTabText(index, text)

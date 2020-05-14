@@ -35,7 +35,7 @@ class MainWindow(QMainWindow):
 
         new_tab_action = QAction(QIcon(icons.TAB_NEW), "New &Tab", self)
         new_tab_action.setShortcut("Ctrl+T")
-        new_tab_action.triggered.connect(partial(main_widget.AddTab, None))
+        new_tab_action.triggered.connect(main_widget.AddTab)
         file_menu.addAction(new_tab_action)
         self.addAction(new_tab_action)
 

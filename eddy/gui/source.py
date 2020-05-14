@@ -1,4 +1,5 @@
 import json
+from types import SimpleNamespace
 
 from PySide2.QtCore import Signal, QItemSelectionModel
 from PySide2.QtGui import QIcon, QStandardItemModel, QStandardItem
@@ -6,10 +7,53 @@ from PySide2.QtWidgets import QTreeView, QAbstractItemView
 
 from paths import ROOT_DIR, LOCAL_DATABASES
 from eddy.icons import icons
+from eddy.network.inspire import InspirePlugin
+from eddy.network.arxiv import ArXivPlugin
 from eddy.data.database import Database, Table
 
 
+class WebSource:
+    def __init__(self, name, plugin, icon, query_map=lambda x: x):
+        self.name = name
+        self.icon = icon
+        self.query_map = query_map
+        self.plugin = plugin
+
+    def CreateSearch(self, query):
+        query = self.query_map(query)
+        return WebSearch(self.icon, query, self.plugin)
+
+
+# class SearchSource:
+#     def __init__(self, name, web_source, query):
+#         self.name = name
+#         self.web_source = web_source
+#         self.query = query
+
+
+class LocalSource:
+    def __init__(self, name, file):
+        self.name = name
+        self.table = Table(Database(file), "tab")
+
+
+class WebSearch(SimpleNamespace):
+    def __init__(self, icon, query, plugin):
+        super().__init__(icon=icon, query=query, plugin=plugin)
+
+
+class SearchRequest(SimpleNamespace):
+    # The argument source contains the string associated with a key in SourceModel.WEB_SOURCES
+    def __init__(self, source, query):
+        super().__init__(source=source, query=query)
+
+
 class SourceModel(QStandardItemModel):
+    WEB_SOURCES = {
+        "INSPIRE": WebSource("INSPIRE", InspirePlugin, icons.INSPIRE),
+        "arXiv": WebSource("arXiv", ArXivPlugin, icons.ARXIV)
+    }
+
     def __init__(self, parent=None):
         super(SourceModel, self).__init__(parent)
 
@@ -24,54 +68,48 @@ class SourceModel(QStandardItemModel):
         local.setSelectable(False)
         local.setDropEnabled(False)
 
-        inspire = QStandardItem(QIcon(icons.INSPIRE), "INSPIRE")
-        inspire.setEditable(False)
-        inspire.setDropEnabled(False)
-        # inspire_ac = QStandardItem(QIcon(icons.INSPIRE), "ac < 10")
-        # inspire_ac.setEditable(False)
-        # inspire_ac.setDropEnabled(False)
-        arxiv = QStandardItem(QIcon(icons.ARXIV), "arXiv")
-        arxiv.setEditable(False)
-        arxiv.setDropEnabled(False)
+        root.appendRow(web_search)
+        root.appendRow(local)
 
-        self._ITEMS = {
-            "INSPIRE": inspire,
-            # "INSPIRE ac": inspire_ac,
-            "arXiv": arxiv
-        }
+        self._ITEMS = {}
+        for (n, s) in SourceModel.WEB_SOURCES.items():
+            i = QStandardItem(QIcon(s.icon), s.name)
+            i.setData(s)
+            i.setEditable(False)
+            i.setDropEnabled(False)
+            self._ITEMS[n] = i
+            web_search.appendRow(i)
 
-        self._TABLES = {}
         for (n, p) in LOCAL_DATABASES.items():
-            self._TABLES[n] = Table(Database(p), "tab")
+            s = LocalSource(n, p)
             i = QStandardItem(QIcon(icons.DATABASE), n)
+            i.setData(s)
             i.setEditable(False)
             local.appendRow(i)
-
-        root.appendRow(web_search)
-        web_search.appendRow(inspire)
-        # inspire.appendRow(inspire_ac)
-        web_search.appendRow(arxiv)
-        root.appendRow(local)
 
     def mimeTypes(self):
         return ["application/x-eddy"]
 
     def canDropMimeData(self, data, action, row, column, parent):
-        # We could implement additional logic to prevent self-drops.
-
+        # Drop only on valid indices, where parent is the index and row = column = -1
         if (row, column) != (-1, -1):
             return False
         if not parent.isValid():
             return False
-        # Drop only on valid indices, where parent is the index and row = column = -1.
+
+        # We should find a way to prevent self-drops.
+        # This is difficult since this class does not know about the selected index
+        # and provides the model for many view instances.
+        # One way out would be to include in the mime data the table where these come from.
+        #
+        # if self.itemFromIndex(parent).data().table == …:
+        #     return False
+
         return True
 
     def dropMimeData(self, data, action, row, column, parent):
-        self.itemFromIndex(parent)
-        table = self._TABLES[self.itemFromIndex(parent).text()]
-
         records = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))
-        table.AddData(records)
+        self.itemFromIndex(parent).data().table.AddData(records)
 
         return True
 
@@ -79,7 +117,8 @@ class SourceModel(QStandardItemModel):
 class SourcePanel(QTreeView):
     SearchRequested = Signal(dict)
     WebSourceSelected = Signal()
-    LocalSourceSelected = Signal(Table)
+    LocalSourceSelected = Signal(LocalSource)
+    # SourceSelected = Signal((WebSource,), (LocalSource,))
 
     def __init__(self, parent=None):
         super(SourcePanel, self).__init__(parent)
@@ -92,8 +131,6 @@ class SourcePanel(QTreeView):
         self.setHeaderHidden(True)
 
         self.setDragDropMode(QAbstractItemView.DropOnly)
-
-        self._selected_source = None
 
     def setModel(self, model):
         super(SourcePanel, self).setModel(model)
@@ -130,14 +167,11 @@ class SourcePanel(QTreeView):
         if rows == []:
             return
 
-        item = self.model().itemFromIndex(rows[0])
-        self._selected_source = item.text()
-
-        table = self.model()._TABLES.get(self._selected_source, None)
-        if table == None:
-            self.WebSourceSelected.emit()
+        source = self.model().itemFromIndex(rows[0]).data()
+        if isinstance(source, LocalSource):
+            self.LocalSourceSelected.emit(source)
         else:
-            self.LocalSourceSelected.emit(table)
+            self.WebSourceSelected.emit()
 
     def SelectSource(self, source):
         item = self.model()._ITEMS[source]
@@ -156,4 +190,11 @@ class SourcePanel(QTreeView):
         )
 
     def LaunchSearch(self, query):
-        self.SearchRequested.emit({"source": self._selected_source, "query": query})
+        rows = self.selectionModel().selectedRows()
+        if len(rows) != 1:
+            return
+
+        source = self.model().itemFromIndex(rows[0]).data()
+
+        if isinstance(source, WebSource):
+            self.SearchRequested.emit(source.CreateSearch(query))
