@@ -89,10 +89,10 @@ class Table(QObject):
         placeholder = "(" + ', '.join('?' * len(keys)) + ")"
         query = "INSERT INTO " + self._name + keys_str + " VALUES " + placeholder
         values = [
-            tuple([
+            tuple(
                 Table._ENCODE_FUNCTIONS.get(k, lambda x: x)(d.get(k, self._DEFAULTS[k]))
                 for k in keys
-            ])
+            )
             for d in data
         ]
         cursor = self._connection.cursor()
@@ -110,15 +110,20 @@ class Table(QObject):
         self.Updated.emit()
 
     def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=()):
+        n_strings = len(filter_strings)
+
         query = "SELECT " + ", ".join(keys) + " FROM " + self._name
-        for i, s in enumerate(filter_strings):
-            query = query + (" WHERE " if i == 0 else " AND ")
-            query = query + "authors || title LIKE '%" + s + "%'"
+        if n_strings > 0:
+            query = query + " WHERE authors || title LIKE ?"
+        if n_strings > 1:
+            query = query + (" AND authors || title LIKE ?" * (n_strings - 1))
         if sort_key is not None:
             query = query + " ORDER BY " + sort_key + " " + sort_order
 
+        patterns = tuple("%" + f + "%" for f in filter_strings)
+
         cursor = self._connection.cursor()
-        cursor.execute(query)
+        cursor.execute(query, patterns)
         data = [dict(zip(keys, t)) for t in cursor.fetchall()]
         for k in Table._DECODE_FUNCTIONS:
             if k in keys:
