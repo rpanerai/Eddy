@@ -110,6 +110,7 @@ class Table(QObject):
         self.Updated.emit()
 
     def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=()):
+        keys = list({k for k in keys if k in Table._KEYS.keys()})
         n_strings = len(filter_strings)
 
         query = "SELECT " + ", ".join(keys) + " FROM " + self._name
@@ -132,7 +133,12 @@ class Table(QObject):
 
         return data
 
-    def GetRecord(self, id_, keys=_DEFAULTS.keys()):
+    def GetRow(self, id_, keys=None):
+        if keys == None:
+            keys = Table._DEFAULTS.keys()
+        else:
+            list({k for k in keys if k in Table._DEFAULTS.keys()})
+
         query = "SELECT " + ", ".join(keys) + " FROM " + self._name + " WHERE id = " + str(id_)
 
         cursor = self._connection.cursor()
