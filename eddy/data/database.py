@@ -149,3 +149,18 @@ class Table(QObject):
                 data[k] = Table._DECODE_FUNCTIONS[k](data[k])
 
         return data
+
+    def EditRow(self, id_, data):
+        keys = [k for k in data.keys() if k in Table._DEFAULTS.keys()]
+
+        keys_str = "(" + ', '.join(keys) + ")"
+        placeholder = "(" + ', '.join('?' * len(keys)) + ")"
+
+        query = "UPDATE " + self._name + " SET " + keys_str + " = " + placeholder + " WHERE id = ?"
+
+        values = [Table._ENCODE_FUNCTIONS.get(k, lambda x: x)(data[k]) for k in keys]
+        values.append(id_)
+        values = tuple(values)
+
+        cursor = self._connection.cursor()
+        cursor.execute(query, values)
