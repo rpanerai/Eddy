@@ -111,7 +111,7 @@ class TableModel(QAbstractItemModel):
 
     def mimeData(self, indexes):
         ids = [self._ids[r] for r in list({i.row() for i in indexes})]
-        records = [self._table.GetRecord(i) for i in ids]
+        records = [self._table.GetRow(i) for i in ids]
 
         data = QMimeData()
         data.setData(self.mimeTypes()[0], QByteArray(json.dumps(records).encode("utf-8")))
@@ -172,13 +172,13 @@ class TableModel(QAbstractItemModel):
         return self._ids[row]
 
     def GetArXivId(self, row):
-        return self._table.GetRecord(self.GetId(row), ("arxiv_id",))["arxiv_id"]
+        return self._table.GetRow(self.GetId(row), ("arxiv_id",))["arxiv_id"]
 
     def GetInspireId(self, row):
-        return self._table.GetRecord(self.GetId(row), ("inspire_id",))["inspire_id"]
+        return self._table.GetRow(self.GetId(row), ("inspire_id",))["inspire_id"]
 
     def GetDOIs(self, row):
-        return self._table.GetRecord(self.GetId(row), ("dois",))["dois"]
+        return self._table.GetRow(self.GetId(row), ("dois",))["dois"]
 
     def FilterSelection(self, ids):
         return [i for i in ids if i in self._ids]

@@ -1,23 +1,29 @@
-from PySide2.QtCore import Qt, QAbstractItemModel, QModelIndex
-from PySide2.QtWidgets import QAbstractItemView, QTableView, QHeaderView
+from functools import partial
+
+from PySide2.QtCore import Signal
+from PySide2.QtGui import QFont, QIcon
+from PySide2.QtWidgets import (
+    QWidget, QHBoxLayout, QVBoxLayout, QFormLayout, QScrollArea, QLineEdit, QTextEdit, QToolButton,
+    QComboBox
+)
+
+from eddy.icons import icons
 
 
-class ItemModel(QAbstractItemModel):
-    _FIELDS = {
-        "type": "Type",
-        "title": "Title",
-        "authors": "Authors",
-        "abstract": "Abstract",
-        "journal": "Journal",
-        "texkey": "BibTeX",
-        "inspire_id": "INSPIRE",
-        "arxiv_id": "arXiv",
-        "dois": "DOIs"
-    }
+class ItemWidget(QWidget):
+    ItemUpdated = Signal()
 
-    _KEYS = tuple(_FIELDS.keys())
-
-    _HEADERS = tuple(_FIELDS.values())
+    _KEYS = (
+        "type",
+        "title",
+        "authors",
+        "abstract",
+        "journal",
+        "texkey",
+        "inspire_id",
+        "arxiv_id",
+        "dois"
+    )
 
     _FORMAT_TYPE = {
         "A": "Article",
@@ -30,58 +36,156 @@ class ItemModel(QAbstractItemModel):
     }
 
     _FORMAT_FUNCTIONS = {
-        "type": lambda x: ItemModel._FORMAT_TYPE.get(x, ""),
+        "type": lambda x: ItemWidget._FORMAT_TYPE.get(x, ""),
         "authors": "\n".join,
         # Alternatively one could use
         # lambda x: "\n".join([a.split(",", 1)[0] for a in x])
-        "dois": "\n".join,
+        "inspire_id": lambda x: str(x) if x is not None else None,
+        "dois": "\n".join
     }
 
     def __init__(self, parent=None):
-        super(ItemModel, self).__init__(parent)
+        super(ItemWidget, self).__init__(parent)
 
         self._table = None
+        self._id = -1
 
-        self._model = []
+        self._scroll = QScrollArea()
+        # self._scroll.setBackgroundRole(QPalette.Base)
+        self._scroll.setWidgetResizable(True)
 
-    def rowCount(self, parent=QModelIndex()):
-        return len(self._model)
+        self._type = QComboBox()
+        for (k, v) in ItemWidget._FORMAT_TYPE.items():
+            self._type.addItem(v, k)
 
-    def columnCount(self, parent=QModelIndex()):
-        return 1
+        self._journal = QLineEdit()
+        self._texkey = QLineEdit()
+        # copy_texkey = self._texkey.addAction(
+        #     QIcon.fromTheme("edit-copy"), QLineEdit.TrailingPosition
+        # )
+        self._inspire_id = QLineEdit()
+        self._arxiv_id = QLineEdit()
 
-    def index(self, row, column, parent=QModelIndex()):
-        if not self.hasIndex(row, column, parent):
-            return QModelIndex()
+        min_height = self._journal.sizeHint().height()
 
-        return self.createIndex(row, column)
+        self._title = AdaptiveTextEdit(min_height)
+        self._title.setFontWeight(QFont.Bold)
+        self._authors = AdaptiveTextEdit(min_height)
+        self._abstract = AdaptiveTextEdit(min_height)
+        self._dois = AdaptiveTextEdit(min_height)
 
-    def parent(self, index):
-        return QModelIndex()
+        self._scroll_widget = QWidget()
+        self._SetupScrollUI()
+        self._scroll.setWidget(self._scroll_widget)
+        self._scroll_widget.hide()
 
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
-            return None
+        self._save = QToolButton()
+        self._save.setIcon(QIcon(icons.SAVE))
+        self._save.clicked.connect(self._Save)
+        self._reload = QToolButton()
+        self._reload.setIcon(QIcon(icons.RELOAD))
+        self._reload.clicked.connect(self.DisplayItem)
+        self._tool_widget = QWidget()
+        self._SetupToolUI()
 
-        if role == Qt.DisplayRole:
-            return self._model[index.row()]
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.addWidget(self._scroll)
+        layout.addWidget(self._tool_widget)
+        self.setLayout(layout)
 
-        return None
+    def _SetupScrollUI(self):
+        form_layout = QFormLayout()
+        form_layout.setContentsMargins(0, 0, 0, 0)
+        form_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        form_layout.addRow("Type", self._type)
+        form_layout.addRow("Title", self._title)
+        form_layout.addRow("Authors", self._authors)
+        form_layout.addRow("Abstract", self._abstract)
+        form_layout.addRow("Journal", self._journal)
+        form_layout.addRow("BibTeX", self._texkey)
+        form_layout.addRow("INSPIRE", self._inspire_id)
+        form_layout.addRow("arXiv", self._arxiv_id)
+        form_layout.addRow("DOIs", self._dois)
+        form_layout.setVerticalSpacing(0)
+        form = QWidget()
+        form.setLayout(form_layout)
 
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if orientation == Qt.Orientation.Vertical:
-            if role == Qt.DisplayRole:
-                return ItemModel._HEADERS[section]
-            if role == Qt.TextAlignmentRole:
-                return Qt.AlignRight
+        scroll_layout = QVBoxLayout()
+        scroll_layout.addWidget(form)
+        scroll_layout.addStretch(1)
 
-        return None
+        self._scroll_widget.setLayout(scroll_layout)
 
-    # def flags(self, index):
-    #     if not index.isValid():
-    #         return None
+    def _SetupToolUI(self):
+        tool_layout = QHBoxLayout()
+        tool_layout.setContentsMargins(0, 0, 0, 0)
+        tool_layout.addWidget(self._reload)
+        tool_layout.addStretch(1)
+        tool_layout.addWidget(self._save)
+        self._tool_widget.setLayout(tool_layout)
 
-    #     return Qt.ItemIsEnabled
+        self._reload.setEnabled(False)
+        self._save.setEnabled(False)
+
+        self._type.currentIndexChanged.connect(self._EnableRefreshSave)
+        self._journal.textEdited.connect(self._EnableRefreshSave)
+        self._texkey.textEdited.connect(self._EnableRefreshSave)
+        self._inspire_id.textEdited.connect(self._EnableRefreshSave)
+        self._arxiv_id.textEdited.connect(self._EnableRefreshSave)
+        self._title.textChanged.connect(self._EnableRefreshSave)
+        self._authors.textChanged.connect(self._EnableRefreshSave)
+        self._abstract.textChanged.connect(self._EnableRefreshSave)
+        self._dois.textChanged.connect(self._EnableRefreshSave)
+
+    def _EnableRefreshSave(self):
+        self._reload.setEnabled(True)
+        self._save.setEnabled(True)
+
+    def _Save(self):
+        data = {}
+
+        data["type"] = self._type.currentData()
+
+        title = self._title.toPlainText().strip()
+        data["title"] = title if title != "" else None
+
+        data["authors"] = [
+            a for a in
+            [" ".join(a.split()) for a in self._authors.toPlainText().splitlines()]
+            if a != ""
+        ]
+
+        abstract = self._abstract.toPlainText().strip()
+        data["abstract"] = abstract if abstract != "" else None
+
+        journal = self._journal.text().strip()
+        data["journal"] = journal if journal != "" else None
+
+        texkey = self._texkey.text().strip()
+        data["texkey"] = texkey if texkey != "" else None
+
+        inspire_id = self._inspire_id.text().strip()
+        if inspire_id == "":
+            data["inspire_id"] = None
+        else:
+            try:
+                data["inspire_id"] = int(inspire_id)
+            except:
+                pass
+
+        arxiv_id = self._arxiv_id.text().strip()
+        data["arxiv_id"] = arxiv_id if arxiv_id != "" else None
+
+        data["dois"] = [
+            d for d in
+            [d.strip() for d in self._dois.toPlainText().splitlines()]
+            if d != ""
+        ]
+
+        self._table.EditRow(self._id, data)
+
+        self.ItemUpdated.emit()
 
     def SetTable(self, database_table):
         if self._table is not None:
@@ -91,48 +195,57 @@ class ItemModel(QAbstractItemModel):
         self._table.Cleared.connect(self.Clear)
 
     def Clear(self):
-        self.beginResetModel()
-        self._model = []
-        self.endResetModel()
+        self._scroll_widget.hide()
+        self._scroll.verticalScrollBar().hide()
 
-    def DisplayRecord(self, id_):
-        self.beginResetModel()
+    def DisplayItem(self, id_=False):
+        if id_:
+            self._id = id_
 
-        if id_ == -1:
+        if self._id == -1:
             self.Clear()
-        else:
-            record = self._table.GetRecord(id_, ItemModel._KEYS)
+            return
 
-            for k in ItemModel._FORMAT_FUNCTIONS:
-                record[k] = ItemModel._FORMAT_FUNCTIONS[k](record[k])
+        record = self._table.GetRow(self._id, ItemWidget._KEYS)
+        for (k, v) in ItemWidget._FORMAT_FUNCTIONS.items():
+            record[k] = v(record[k])
 
-            self._model = list(record.values())
+        self._type.setCurrentText(record["type"])
+        self._title.setPlainText(record["title"])
+        self._authors.setPlainText(record["authors"])
+        self._abstract.setPlainText(record["abstract"])
+        self._journal.setText(record["journal"])
+        self._texkey.setText(record["texkey"])
+        self._inspire_id.setText(record["inspire_id"])
+        self._arxiv_id.setText(record["arxiv_id"])
+        self._dois.setPlainText(record["dois"])
 
-        self.endResetModel()
+        self._scroll.verticalScrollBar().show()
+        self._scroll_widget.show()
+
+        self._reload.setEnabled(False)
+        self._save.setEnabled(False)
 
 
-class ItemView(QTableView):
-    def __init__(self, parent=None):
-        super(ItemView, self).__init__(parent)
+class AdaptiveTextEdit(QTextEdit):
+    def __init__(self, min_height, parent=None):
+        # One might want to add a mechanism for setting a max_height.
+        super(AdaptiveTextEdit, self).__init__(parent)
+        self.min_height = min_height
+        self.setAcceptRichText(False)
+        self.setTabChangesFocus(True)
+        self.document().documentLayout().documentSizeChanged.connect(self.Resize)
 
-        # self.setShowGrid(False)
+    def focusOutEvent(self, event):
+        cursor = self.textCursor()
+        cursor.clearSelection()
+        self.setTextCursor(cursor)
 
-        self.horizontalHeader().setStretchLastSection(True)
-        self.horizontalHeader().hide()
+        super(AdaptiveTextEdit, self).focusOutEvent(event)
 
-        self.verticalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-
-        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
-
-        self.setSelectionMode(QAbstractItemView.NoSelection)
-
-    def setModel(self, model):
-        if self.model() is not None:
-            model.modelReset.disconnect(self.expandAll)
-
-        super(ItemView, self).setModel(model)
-
-    def resizeEvent(self, event):
-        super(ItemView, self).resizeEvent(event)
-
-        self.resizeRowsToContents()
+    def Resize(self, new_size):
+        margins = self.contentsMargins()
+        document_size = self.document().documentLayout().documentSize()
+        height = document_size.height() + margins.top() + margins.bottom()
+        # self.setMinimumHeight(max(height, self.min_height))
+        self.setFixedHeight(max(height, self.min_height))

@@ -8,7 +8,7 @@ from PySide2.QtWidgets import (
 from eddy.network.fetcher import Fetcher
 from eddy.data.database import Database, Table
 from eddy.gui.table import TableModel, TableView
-from eddy.gui.item import ItemModel, ItemView
+from eddy.gui.item import ItemWidget
 from eddy.gui.searchfilter import SearchBar, FilterBar
 from eddy.gui.source import SearchRequest, SourceModel, SourcePanel
 from eddy.icons import icons
@@ -51,10 +51,10 @@ class TabContent(QWidget):
         self._table_view.setModel(self._table_model)
         self._table_view.NewTabRequested.connect(self.NewTabRequested)
 
-        self._item_model = ItemModel(self)
-        self._table_view.ItemSelected.connect(self._item_model.DisplayRecord)
-        self._item_view = ItemView()
-        self._item_view.setModel(self._item_model)
+        self._item_widget = ItemWidget()
+        self._item_widget.SetTable(self._database_table)
+        self._table_view.ItemSelected.connect(self._item_widget.DisplayItem)
+        self._item_widget.ItemUpdated.connect(self._table_model.Update)
 
         self._status_bar = QStatusBar()
         self._progress_bar = QProgressBar()
@@ -85,7 +85,7 @@ class TabContent(QWidget):
         item_splitter = QSplitter(Qt.Horizontal)
         item_splitter.setHandleWidth(4)
         item_splitter.addWidget(self._table_view)
-        item_splitter.addWidget(self._item_view)
+        item_splitter.addWidget(self._item_widget)
         item_splitter.setStretchFactor(0, 2)
         item_splitter.setStretchFactor(1, 1)
         item_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -121,7 +121,7 @@ class TabContent(QWidget):
         self._filter_bar.clear()
         self._database_table.Clear()
         self._table_model.SetTable(self._database_table)
-        self._item_model.SetTable(self._database_table)
+        self._item_widget.SetTable(self._database_table)
 
     def _HandleLocalSourceSelected(self, source):
         if self._web_source_active:
@@ -133,7 +133,7 @@ class TabContent(QWidget):
         self._filter_bar.clear()
         self._status_bar.clearMessage()
         self._table_model.SetTable(source.table)
-        self._item_model.SetTable(source.table)
+        self._item_widget.SetTable(source.table)
 
     def _HandleSearchRequested(self, search):
         self._database_table.Clear()
