@@ -25,38 +25,86 @@ class Table(QObject):
         "type": "TEXT",
         "date": "TEXT",
         "authors": "TEXT",
+        "authors_bais": "TEXT",
+        "editors": "TEXT",
+        "editors_bais": "TEXT",
         "title": "TEXT",
         "abstract": "TEXT",
-        "journal": "TEXT",
+        "publication": "TEXT",
+        "volume": "TEXT",
+        "year": "INTEGER",
+        "issue": "TEXT",
+        "pages": "TEXT",
+        "edition": "TEXT",
+        "series": "TEXT",
+        "publisher": "TEXT",
+        "isbns": "TEXT",
+        "institution": "TEXT",
+        "degree": "TEXT",
         "citations": "INTEGER",
         "inspire_id": "INTEGER",
         "texkey": "TEXT",
         "arxiv_id": "TEXT",
-        "dois": "TEXT"
+        "dois": "TEXT",
+        "urls": "TEXT",
+        "notes": "TEXT",
+        "files": "TEXT",
+        "tags": "TEXT"
     }
 
     _DEFAULTS = {
         "type": None,
         "date": None,
         "authors": [],
+        "authors_bais": [],
+        "editors": [],
+        "editors_bais": [],
         "title": None,
         "abstract": None,
-        "journal": None,
+        "publication": None,
+        "volume": None,
+        "year": None,
+        "issue": None,
+        "pages": None,
+        "edition": None,
+        "series": None,
+        "publisher": None,
+        "isbns": [],
+        "institution": None,
+        "degree": None,
         "citations": None,
         "inspire_id": None,
         "texkey": None,
         "arxiv_id": None,
-        "dois": []
+        "dois": [],
+        "urls": [],
+        "notes": None,
+        "files": [],
+        "tags": []
     }
 
     _ENCODE_FUNCTIONS = {
         "authors": json.dumps,
-        "dois": json.dumps
+        "authors_bais": json.dumps,
+        "editors": json.dumps,
+        "editors_bais": json.dumps,
+        "isbns": json.dumps,
+        "dois": json.dumps,
+        "urls": json.dumps,
+        "files": json.dumps,
+        "tags": json.dumps
     }
 
     _DECODE_FUNCTIONS = {
         "authors": json.loads,
-        "dois": json.loads
+        "authors_bais": json.loads,
+        "editors": json.loads,
+        "editors_bais": json.loads,
+        "isbns": json.loads,
+        "dois": json.loads,
+        "urls": json.loads,
+        "files": json.loads,
+        "tags": json.loads
     }
 
     def __init__(self, database, name, drop_on_del=False, parent=None):
@@ -103,7 +151,7 @@ class Table(QObject):
     def Delete(self, ids):
         query = "DELETE FROM " + self._name + " WHERE id = ?"
         ids = [(i,) for i in ids]
-        
+
         cursor = self._connection.cursor()
         cursor.executemany(query, ids)
 

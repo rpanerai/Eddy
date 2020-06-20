@@ -1,11 +1,10 @@
-from functools import partial
 from datetime import datetime
 
 from PySide2.QtCore import Signal
 from PySide2.QtGui import QFont, QIcon
 from PySide2.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QFormLayout, QScrollArea, QLineEdit, QTextEdit, QToolButton,
-    QComboBox
+    QWidget, QHBoxLayout, QVBoxLayout, QGroupBox, QFormLayout, QScrollArea, QLineEdit, QTextEdit,
+    QToolButton, QComboBox, QFileDialog
 )
 
 from eddy.icons import icons
@@ -18,9 +17,22 @@ class ItemWidget(QWidget):
         "type",
         "title",
         "authors",
+        "authors_bais",
+        "editors",
+        "editors_bais",
         "abstract",
         "date",
-        "journal",
+        "publication",
+        "volume",
+        "issue",
+        "pages",
+        "year",
+        "edition",
+        "series",
+        "publisher",
+        "isbns",
+        "institution",
+        "degree",
         "texkey",
         "inspire_id",
         "arxiv_id",
@@ -40,9 +52,12 @@ class ItemWidget(QWidget):
     _FORMAT_FUNCTIONS = {
         "type": lambda x: ItemWidget._FORMAT_TYPE.get(x, ""),
         "authors": "\n".join,
+        "editors": "\n".join,
+        "isbns": "\n".join,
         # Alternatively one could use
         # lambda x: "\n".join([a.split(",", 1)[0] for a in x])
         "inspire_id": lambda x: str(x) if x is not None else None,
+        "year": lambda x: str(x) if x is not None else None,
         "dois": "\n".join
     }
 
@@ -60,8 +75,22 @@ class ItemWidget(QWidget):
         for (k, v) in ItemWidget._FORMAT_TYPE.items():
             self._type.addItem(v, k)
 
+        # self._type.currentIndexChanged[int].connect(self._RefreshTypeFields)
+
+        self._details_frame = QGroupBox()
+        self._details_layout = QFormLayout()
+
         self._date = QLineEdit()
-        self._journal = QLineEdit()
+        self._publication = QLineEdit()
+        self._volume = QLineEdit()
+        self._issue = QLineEdit()
+        self._pages = QLineEdit()
+        self._year = QLineEdit()
+        self._edition = QLineEdit()
+        self._series = QLineEdit()
+        self._publisher = QLineEdit()
+        self._institution = QLineEdit()
+        self._degree = QLineEdit()
         self._texkey = QLineEdit()
         # copy_texkey = self._texkey.addAction(
         #     QIcon.fromTheme("edit-copy"), QLineEdit.TrailingPosition
@@ -69,12 +98,14 @@ class ItemWidget(QWidget):
         self._inspire_id = QLineEdit()
         self._arxiv_id = QLineEdit()
 
-        min_height = self._journal.sizeHint().height()
+        min_height = self._date.sizeHint().height()
 
         self._title = AdaptiveTextEdit(min_height)
         self._title.setFontWeight(QFont.Bold)
         self._authors = AdaptiveTextEdit(min_height)
+        self._editors = AdaptiveTextEdit(min_height)
         self._abstract = AdaptiveTextEdit(min_height)
+        self._isbns = AdaptiveTextEdit(min_height)
         self._dois = AdaptiveTextEdit(min_height)
 
         self._scroll_widget = QWidget()
@@ -88,6 +119,9 @@ class ItemWidget(QWidget):
         self._reload = QToolButton()
         self._reload.setIcon(QIcon(icons.RELOAD))
         self._reload.clicked.connect(self.DisplayItem)
+        # self._open = QToolButton()
+        # self._open.setIcon(QIcon.fromTheme("document-open"))
+        # self._open.clicked.connect(self._Open)
         self._tool_widget = QWidget()
         self._SetupToolUI()
 
@@ -98,6 +132,22 @@ class ItemWidget(QWidget):
         self.setLayout(layout)
 
     def _SetupScrollUI(self):
+        self._details_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
+        self._details_layout.addRow("Title", self._publication)
+        self._details_layout.addRow("Editors", self._editors)
+        self._details_layout.addRow("Volume", self._volume)
+        self._details_layout.addRow("Issue", self._issue)
+        self._details_layout.addRow("Pages", self._pages)
+        self._details_layout.addRow("Edition", self._edition)
+        self._details_layout.addRow("Series", self._series)
+        self._details_layout.addRow("Publisher", self._publisher)
+        self._details_layout.addRow("ISBNs", self._isbns)
+        self._details_layout.addRow("Institution", self._institution)
+        self._details_layout.addRow("Degree", self._degree)
+        self._details_layout.addRow("Year", self._year)
+        self._details_layout.setVerticalSpacing(0)
+        self._details_frame.setLayout(self._details_layout)
+
         form_layout = QFormLayout()
         form_layout.setContentsMargins(0, 0, 0, 0)
         form_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
@@ -106,7 +156,7 @@ class ItemWidget(QWidget):
         form_layout.addRow("Authors", self._authors)
         form_layout.addRow("Abstract", self._abstract)
         form_layout.addRow("Date", self._date)
-        form_layout.addRow("Journal", self._journal)
+        form_layout.addRow("", self._details_frame)
         form_layout.addRow("BibTeX", self._texkey)
         form_layout.addRow("INSPIRE", self._inspire_id)
         form_layout.addRow("arXiv", self._arxiv_id)
@@ -125,6 +175,7 @@ class ItemWidget(QWidget):
         tool_layout = QHBoxLayout()
         tool_layout.setContentsMargins(0, 0, 0, 0)
         tool_layout.addWidget(self._reload)
+        # tool_layout.addWidget(self._open)
         tool_layout.addStretch(1)
         tool_layout.addWidget(self._save)
         self._tool_widget.setLayout(tool_layout)
@@ -134,7 +185,16 @@ class ItemWidget(QWidget):
 
         self._type.currentIndexChanged.connect(self._EnableRefreshSave)
         self._date.textEdited.connect(self._EnableRefreshSave)
-        self._journal.textEdited.connect(self._EnableRefreshSave)
+        self._publication.textEdited.connect(self._EnableRefreshSave)
+        self._volume.textEdited.connect(self._EnableRefreshSave)
+        self._issue.textEdited.connect(self._EnableRefreshSave)
+        self._pages.textEdited.connect(self._EnableRefreshSave)
+        self._year.textEdited.connect(self._EnableRefreshSave)
+        self._edition.textEdited.connect(self._EnableRefreshSave)
+        self._series.textEdited.connect(self._EnableRefreshSave)
+        self._publisher.textEdited.connect(self._EnableRefreshSave)
+        self._institution.textEdited.connect(self._EnableRefreshSave)
+        self._degree.textEdited.connect(self._EnableRefreshSave)
         self._texkey.textEdited.connect(self._EnableRefreshSave)
         self._inspire_id.textEdited.connect(self._EnableRefreshSave)
         self._arxiv_id.textEdited.connect(self._EnableRefreshSave)
@@ -143,8 +203,13 @@ class ItemWidget(QWidget):
         # QTextEdit widgets are updated in DisplayItem().
         self._title.textChanged.connect(self._EnableRefreshSave)
         self._authors.textChanged.connect(self._EnableRefreshSave)
+        self._editors.textChanged.connect(self._EnableRefreshSave)
         self._abstract.textChanged.connect(self._EnableRefreshSave)
+        self._isbns.textChanged.connect(self._EnableRefreshSave)
         self._dois.textChanged.connect(self._EnableRefreshSave)
+
+    # def _RefreshTypeFields(self, index):
+    #     pass
 
     def _EnableRefreshSave(self):
         self._reload.setEnabled(True)
@@ -158,11 +223,33 @@ class ItemWidget(QWidget):
         title = self._title.toPlainText().strip()
         data["title"] = title if title != "" else None
 
-        data["authors"] = [
+        authors_raw = [
             a for a in
             [" ".join(a.split()) for a in self._authors.toPlainText().splitlines()]
             if a != ""
         ]
+        authors = []
+        authors_bais = []
+        for a in authors_raw:
+            (n, b) = ItemWidget._ParseAuthor(a)
+            authors.append(n)
+            authors_bais.append(b)
+        data["authors"] = authors
+        data["authors_bais"] = authors_bais
+
+        editors_raw = [
+            e for e in
+            [" ".join(e.split()) for e in self._editors.toPlainText().splitlines()]
+            if e != ""
+        ]
+        editors = []
+        editors_bais = []
+        for e in editors_raw:
+            (n, b) = ItemWidget._ParseAuthor(e)
+            editors.append(n)
+            editors_bais.append(b)
+        data["editors"] = editors
+        data["editors_bais"] = editors_bais
 
         abstract = self._abstract.toPlainText().strip()
         data["abstract"] = abstract if abstract != "" else None
@@ -175,8 +262,47 @@ class ItemWidget(QWidget):
             if date is not None:
                 data["date"] = date
 
-        journal = self._journal.text().strip()
-        data["journal"] = journal if journal != "" else None
+        publication = self._publication.text().strip()
+        data["publication"] = publication if publication != "" else None
+
+        volume = self._volume.text().strip()
+        data["volume"] = volume if volume != "" else None
+
+        issue = self._issue.text().strip()
+        data["issue"] = issue if issue != "" else None
+
+        pages = self._pages.text().strip()
+        data["pages"] = pages if pages != "" else None
+
+        year = self._year.text().strip()
+        if year == "":
+            data["year"] = None
+        else:
+            try:
+                data["year"] = int(year)
+            except:
+                pass
+
+        edition = self._edition.text().strip()
+        data["edition"] = edition if edition != "" else None
+
+        series = self._series.text().strip()
+        data["series"] = series if series != "" else None
+
+        publisher = self._publisher.text().strip()
+        data["publisher"] = publisher if publisher != "" else None
+
+        data["isbns"] = [
+            i for i in
+            [" ".join(i.split()) for i in self._isbns.toPlainText().splitlines()]
+            if i != ""
+        ]
+
+        institution = self._institution.text().strip()
+        data["institution"] = institution if institution != "" else None
+
+        degree = self._degree.text().strip()
+        data["degree"] = degree if degree != "" else None
 
         texkey = self._texkey.text().strip()
         data["texkey"] = texkey if texkey != "" else None
@@ -203,6 +329,9 @@ class ItemWidget(QWidget):
 
         self.ItemUpdated.emit()
 
+    # def _Open(self):
+    #     pass
+
     def SetTable(self, database_table):
         if self._table is not None:
             self._table.Cleared.disconnect(self.Clear)
@@ -220,18 +349,45 @@ class ItemWidget(QWidget):
 
         if self._id == -1:
             self.Clear()
+            self._reload.setEnabled(False)
+            self._save.setEnabled(False)
             return
 
         record = self._table.GetRow(self._id, ItemWidget._KEYS)
+        authors = []
+        for (a, b) in zip(record["authors"], record["authors_bais"]):
+            if b is None:
+                authors.append(a)
+            else:
+                authors.append(a + " (" + b + ")")
+        record["authors"] = authors
+        editors = []
+        for (e, b) in zip(record["editors"], record["editors_bais"]):
+            if b is None:
+                authors.append(e)
+            else:
+                authors.append(e + " (" + b + ")")
+        record["editors"] = editors
         for (k, v) in ItemWidget._FORMAT_FUNCTIONS.items():
             record[k] = v(record[k])
 
         self._type.setCurrentText(record["type"])
         self._title.setPlainText(record["title"])
         self._authors.setPlainText(record["authors"])
+        self._editors.setPlainText(record["editors"])
         self._abstract.setPlainText(record["abstract"])
         self._date.setText(record["date"])
-        self._journal.setText(record["journal"])
+        self._publication.setText(record["publication"])
+        self._volume.setText(record["volume"])
+        self._issue.setText(record["issue"])
+        self._pages.setText(record["pages"])
+        self._year.setText(record["year"])
+        self._edition.setText(record["edition"])
+        self._series.setText(record["series"])
+        self._publisher.setText(record["publisher"])
+        self._isbns.setPlainText(record["isbns"])
+        self._institution.setText(record["institution"])
+        self._degree.setText(record["degree"])
         self._texkey.setText(record["texkey"])
         self._inspire_id.setText(record["inspire_id"])
         self._arxiv_id.setText(record["arxiv_id"])
@@ -242,6 +398,22 @@ class ItemWidget(QWidget):
 
         self._reload.setEnabled(False)
         self._save.setEnabled(False)
+
+    @staticmethod
+    def _ParseAuthor(author):
+        split = author.split("(", 1)
+        author = split[0].strip()
+        if len(split) == 1:
+            return(author, None)
+
+        bai = split[1].split(")", 1)
+        if len(bai) == 1:
+            return(author, None)
+
+        bai = bai[0].replace(" ", "")
+        # The sanity check on the BAI could be further refined
+
+        return(author, bai)
 
     @staticmethod
     def _ParseDate(date_string):

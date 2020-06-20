@@ -22,6 +22,7 @@ class TabContent(QWidget):
         super(TabContent, self).__init__(parent)
 
         self._database_table = Table(memory_database, "tab" + str(index), drop_on_del=True)
+        # self._database_table = Table(Database("./test"), "items", drop_on_del=False)
         self._database_table.Clear()
 
         self._fetcher = Fetcher()

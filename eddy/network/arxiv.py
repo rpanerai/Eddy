@@ -35,13 +35,14 @@ class ArXivPlugin():
         item["date"] = entry["published"].split("T", 1)[0]
 
         item["authors"] = [a["name"] for a in entry['authors']]
+        item["authors_bais"] = [None] * len(item["authors"])
 
         item["title"] = entry["title"].replace("\n ", "")
 
         item["abstract"] = entry["summary"].replace("\n", " ")
 
         if "arxiv_journal_ref" in entry:
-            item["journal"] = entry["arxiv_journal_ref"]
+            item["publication"] = entry["arxiv_journal_ref"]
 
         item["arxiv_id"] = entry["id"].rsplit("/abs/", 1)[1].rsplit("v", 1)[0]
 

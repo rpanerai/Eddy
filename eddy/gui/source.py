@@ -34,7 +34,7 @@ class WebSource:
 class LocalSource:
     def __init__(self, name, file):
         self.name = name
-        self.table = Table(Database(file), "tab")
+        self.table = Table(Database(file), "items")
 
 
 class WebSearch(SimpleNamespace):
