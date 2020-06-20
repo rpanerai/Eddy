@@ -1,4 +1,5 @@
 import json
+import os
 from types import SimpleNamespace
 
 from PySide2.QtCore import Signal, QItemSelectionModel
@@ -81,6 +82,10 @@ class SourceModel(QStandardItemModel):
             web_search.appendRow(i)
 
         for (n, p) in LOCAL_DATABASES.items():
+            if not os.path.isfile(p):
+                print("Error: Cannot find database file", p)
+                continue
+
             s = LocalSource(n, p)
             i = QStandardItem(QIcon(icons.DATABASE), n)
             i.setData(s)
