@@ -1,10 +1,11 @@
+from functools import partial
 import json
 import os
 from types import SimpleNamespace
 
-from PySide2.QtCore import Signal, QItemSelectionModel
-from PySide2.QtGui import QIcon, QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QTreeView, QAbstractItemView
+from PySide2.QtCore import Qt, Signal, QItemSelectionModel, QUrl
+from PySide2.QtGui import QIcon, QStandardItemModel, QStandardItem, QDesktopServices
+from PySide2.QtWidgets import QTreeView, QAbstractItemView, QMenu
 
 from paths import ROOT_DIR, LOCAL_DATABASES
 from eddy.icons import icons
@@ -35,7 +36,8 @@ class WebSource:
 class LocalSource:
     def __init__(self, name, file):
         self.name = name
-        self.table = Table(Database(file), "items")
+        self.database = Database(file)
+        self.table = Table(self.database, "items")
 
 
 class WebSearch(SimpleNamespace):
@@ -72,13 +74,13 @@ class SourceModel(QStandardItemModel):
         root.appendRow(web_search)
         root.appendRow(local)
 
-        self._ITEMS = {}
+        self.ITEMS = {}
         for (n, s) in SourceModel.WEB_SOURCES.items():
             i = QStandardItem(QIcon(s.icon), s.name)
             i.setData(s)
             i.setEditable(False)
             i.setDropEnabled(False)
-            self._ITEMS[n] = i
+            self.ITEMS[n] = i
             web_search.appendRow(i)
 
         for (n, p) in LOCAL_DATABASES.items():
@@ -137,10 +139,22 @@ class SourcePanel(QTreeView):
 
         self.setDragDropMode(QAbstractItemView.DropOnly)
 
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._HandleRightClickOnItem)
+
     def setModel(self, model):
         super(SourcePanel, self).setModel(model)
 
         self.expandAll()
+
+    def mousePressEvent(self, event):
+        # We reimplement this to prevent right clicks from selecting sources
+        if event.button() == Qt.RightButton:
+            index = self.indexAt(event.pos())
+            if index.isValid():
+                self.selectionModel().setCurrentIndex(index, QItemSelectionModel.Current)
+        else:
+            super(SourcePanel, self).mousePressEvent(event)
 
     def selectionCommand(self, index, event):
         # selection_flags = super(SourcePanel, self).selectionCommand(index, event)
@@ -150,12 +164,6 @@ class SourcePanel(QTreeView):
         # In the current setup, two values are produced:
         # Clear | Select | Rows -> 35
         # Deselect | Rows -> 36
-
-        # For the moment, it does not seem to be necessary to read
-        # the value returned by the original implementation.
-        # It might turn out to be useful in the following, where we might not want to
-        # automatically respond to any event associated to a selectable index with a Select flag
-        # (e.g. a request for a context menu).
 
         if not index.isValid():
             return QItemSelectionModel.NoUpdate
@@ -179,7 +187,7 @@ class SourcePanel(QTreeView):
             self.WebSourceSelected.emit()
 
     def SelectSource(self, source):
-        item = self.model()._ITEMS[source]
+        item = self.model().ITEMS[source]
         index = self.model().indexFromItem(item)
 
         selection_model = self.selectionModel()
@@ -203,3 +211,28 @@ class SourcePanel(QTreeView):
 
         if isinstance(source, WebSource):
             self.SearchRequested.emit(source.CreateSearch(query))
+
+    def _HandleRightClickOnItem(self, position):
+        index = self.indexAt(position)
+        if not index.isValid():
+            return
+
+        source = self.model().itemFromIndex(index).data()
+
+        if isinstance(source, LocalSource):
+            menu = self._ContextMenuLocalSource(source)
+            menu.exec_(self.viewport().mapToGlobal(position))
+
+    def _ContextMenuLocalSource(self, source):
+        menu = QMenu()
+
+        action_open = menu.addAction(QIcon(icons.OPEN), "Open folder")
+
+        path = os.path.dirname(source.database.file)
+        action_open.triggered.connect(partial(self._OpenPath, path))
+
+        return menu
+
+    @staticmethod
+    def _OpenPath(path):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))

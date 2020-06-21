@@ -8,12 +8,12 @@ class Database(QObject):
     def __init__(self, file=":memory:", parent=None):
         super(Database, self).__init__(parent)
 
-        self._file = file
-        self.connection = sqlite3.connect(self._file, isolation_level=None)
+        self.file = file
+        self.connection = sqlite3.connect(self.file, isolation_level=None)
 
     def __del__(self):
         self.connection.close()
-        print("Closing connection to database '" + self._file + "'")
+        print("Closing connection to database '" + self.file + "'")
 
 
 class Table(QObject):
@@ -110,7 +110,7 @@ class Table(QObject):
     def __init__(self, database, name, drop_on_del=False, parent=None):
         super(Table, self).__init__(parent)
 
-        self._database = database
+        self.database = database
         self._connection = database.connection
         self._name = name
         self._drop_on_del = drop_on_del
