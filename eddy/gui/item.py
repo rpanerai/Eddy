@@ -1,13 +1,16 @@
 from datetime import datetime
+import os
+import shutil
 
 from PySide2.QtCore import Signal
 from PySide2.QtGui import QFont, QIcon
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QGroupBox, QFormLayout, QScrollArea, QLineEdit, QTextEdit,
-    QToolButton, QComboBox, QFileDialog
+    QToolButton, QComboBox, QFileDialog, QMessageBox
 )
 
 from eddy.icons import icons
+from paths import STORAGE_FOLDER
 
 
 class ItemWidget(QWidget):
@@ -36,7 +39,8 @@ class ItemWidget(QWidget):
         "texkey",
         "inspire_id",
         "arxiv_id",
-        "dois"
+        "dois",
+        "files"
     )
 
     _FORMAT_TYPE = {
@@ -58,14 +62,18 @@ class ItemWidget(QWidget):
         # lambda x: "\n".join([a.split(",", 1)[0] for a in x])
         "inspire_id": lambda x: str(x) if x is not None else None,
         "year": lambda x: str(x) if x is not None else None,
-        "dois": "\n".join
+        "dois": "\n".join,
+        "files": "\n".join
     }
 
     def __init__(self, parent=None):
         super(ItemWidget, self).__init__(parent)
 
         self._table = None
+        self._database_dir = None
         self._id = -1
+
+        self._updating = False
 
         self._scroll = QScrollArea()
         # self._scroll.setBackgroundRole(QPalette.Base)
@@ -107,6 +115,7 @@ class ItemWidget(QWidget):
         self._abstract = AdaptiveTextEdit(min_height)
         self._isbns = AdaptiveTextEdit(min_height)
         self._dois = AdaptiveTextEdit(min_height)
+        self._files = AdaptiveTextEdit(min_height)
 
         self._scroll_widget = QWidget()
         self._SetupScrollUI()
@@ -119,9 +128,9 @@ class ItemWidget(QWidget):
         self._reload = QToolButton()
         self._reload.setIcon(QIcon(icons.RELOAD))
         self._reload.clicked.connect(self.DisplayItem)
-        # self._open = QToolButton()
-        # self._open.setIcon(QIcon.fromTheme("document-open"))
-        # self._open.clicked.connect(self._Open)
+        self._file_add = QToolButton()
+        self._file_add.setIcon(QIcon(icons.FILE_ADD))
+        self._file_add.clicked.connect(self._AddFile)
         self._tool_widget = QWidget()
         self._SetupToolUI()
 
@@ -133,7 +142,7 @@ class ItemWidget(QWidget):
 
     def _SetupScrollUI(self):
         self._details_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        self._details_layout.addRow("Title", self._publication)
+        self._details_layout.addRow("Journal", self._publication)
         self._details_layout.addRow("Editors", self._editors)
         self._details_layout.addRow("Volume", self._volume)
         self._details_layout.addRow("Issue", self._issue)
@@ -161,6 +170,7 @@ class ItemWidget(QWidget):
         form_layout.addRow("INSPIRE", self._inspire_id)
         form_layout.addRow("arXiv", self._arxiv_id)
         form_layout.addRow("DOIs", self._dois)
+        form_layout.addRow("Files", self._files)
         form_layout.setVerticalSpacing(0)
         form = QWidget()
         form.setLayout(form_layout)
@@ -174,14 +184,15 @@ class ItemWidget(QWidget):
     def _SetupToolUI(self):
         tool_layout = QHBoxLayout()
         tool_layout.setContentsMargins(0, 0, 0, 0)
-        tool_layout.addWidget(self._reload)
-        # tool_layout.addWidget(self._open)
+        tool_layout.addWidget(self._file_add)
         tool_layout.addStretch(1)
+        tool_layout.addWidget(self._reload)
         tool_layout.addWidget(self._save)
         self._tool_widget.setLayout(tool_layout)
 
         self._reload.setEnabled(False)
         self._save.setEnabled(False)
+        self._file_add.setEnabled(False)
 
         self._type.currentIndexChanged.connect(self._EnableRefreshSave)
         self._date.textEdited.connect(self._EnableRefreshSave)
@@ -199,19 +210,22 @@ class ItemWidget(QWidget):
         self._inspire_id.textEdited.connect(self._EnableRefreshSave)
         self._arxiv_id.textEdited.connect(self._EnableRefreshSave)
         # Note that the textChanged() signal is triggered even when the text is modified
-        # programmatically. This is not problem since we disable the buttons immediately after the
-        # QTextEdit widgets are updated in DisplayItem().
+        # programmatically. We use self._updating to inhibit the slot.
         self._title.textChanged.connect(self._EnableRefreshSave)
         self._authors.textChanged.connect(self._EnableRefreshSave)
         self._editors.textChanged.connect(self._EnableRefreshSave)
         self._abstract.textChanged.connect(self._EnableRefreshSave)
         self._isbns.textChanged.connect(self._EnableRefreshSave)
         self._dois.textChanged.connect(self._EnableRefreshSave)
+        self._files.textChanged.connect(self._EnableRefreshSave)
 
     # def _RefreshTypeFields(self, index):
     #     pass
 
     def _EnableRefreshSave(self):
+        if self._updating:
+            return
+
         self._reload.setEnabled(True)
         self._save.setEnabled(True)
 
@@ -325,12 +339,64 @@ class ItemWidget(QWidget):
             if d != ""
         ]
 
+        data["files"] = [
+            f for f in
+            [f.strip() for f in self._files.toPlainText().splitlines()]
+            if f != ""
+        ]
+
         self._table.EditRow(self._id, data)
 
         self.ItemUpdated.emit()
 
-    # def _Open(self):
-    #     pass
+    def _AddFile(self):
+        (file_path, _) = QFileDialog.getOpenFileName(
+            None,
+            "Open Document",
+            self._database_dir,
+            "Documents (*.pdf *.djvu)"
+        )
+        if file_path == "":
+            return
+
+        files_dir = os.path.join(self._database_dir, STORAGE_FOLDER)
+
+        if not os.path.isdir(files_dir):
+            try:
+                os.mkdir(files_dir)
+            except:
+                QMessageBox.critical(None, "Error", "Cannot access storage folder.")
+                return
+
+        file_name = os.path.basename(file_path)
+
+        if os.path.dirname(os.path.realpath(file_path)) == files_dir:
+            self._AppendFile(file_name)
+            return
+
+        new_path = os.path.join(files_dir, file_name)
+        i = 1
+        while os.path.exists(new_path):
+            i = i + 1
+            (body, ext) = os.path.splitext(new_path)
+            new_path = body + "(" + str(i) + ")" + ext
+
+        try:
+            shutil.copy2(file_path, new_path)
+        except:
+            QMessageBox.critical(None, "Error", "Cannot access storage folder.")
+            return
+
+        self._AppendFile(os.path.basename(new_path))
+
+    def _AppendFile(self, file_name):
+        data = self._table.GetRow(self._id, ("files",))
+        data["files"].append(file_name)
+        self._table.EditRow(self._id, data)
+
+        self._updating = True
+        self._files.setPlainText(ItemWidget._FORMAT_FUNCTIONS["files"](data["files"]))
+        self._updating = False
 
     def SetTable(self, database_table):
         if self._table is not None:
@@ -338,6 +404,14 @@ class ItemWidget(QWidget):
 
         self._table = database_table
         self._table.Cleared.connect(self.Clear)
+
+        file_ = database_table.database.file
+        if file_ == ":memory:":
+            self._database_dir = None
+            self._files.setEnabled(False)
+        else:
+            self._database_dir = os.path.dirname(os.path.realpath(file_))
+            self._files.setEnabled(True)
 
     def Clear(self):
         self._scroll_widget.hide()
@@ -351,6 +425,7 @@ class ItemWidget(QWidget):
             self.Clear()
             self._reload.setEnabled(False)
             self._save.setEnabled(False)
+            self._file_add.setEnabled(False)
             return
 
         record = self._table.GetRow(self._id, ItemWidget._KEYS)
@@ -371,6 +446,7 @@ class ItemWidget(QWidget):
         for (k, v) in ItemWidget._FORMAT_FUNCTIONS.items():
             record[k] = v(record[k])
 
+        self._updating = True
         self._type.setCurrentText(record["type"])
         self._title.setPlainText(record["title"])
         self._authors.setPlainText(record["authors"])
@@ -392,12 +468,16 @@ class ItemWidget(QWidget):
         self._inspire_id.setText(record["inspire_id"])
         self._arxiv_id.setText(record["arxiv_id"])
         self._dois.setPlainText(record["dois"])
+        self._files.setPlainText(record["files"])
+        self._updating = False
 
         self._scroll.verticalScrollBar().show()
         self._scroll_widget.show()
 
         self._reload.setEnabled(False)
         self._save.setEnabled(False)
+        if self._database_dir is not None:
+            self._file_add.setEnabled(True)
 
     @staticmethod
     def _ParseAuthor(author):
