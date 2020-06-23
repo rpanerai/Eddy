@@ -5,13 +5,14 @@ import json
 
 from PySide2.QtCore import (
     Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex, QMimeData,
-    QByteArray
+    QByteArray, QUrl
 )
-from PySide2.QtGui import QIcon, QDrag
+from PySide2.QtGui import QIcon, QDrag, QDesktopServices
 from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel
 
 from eddy.icons import icons
 from eddy.gui.source import SearchRequest
+from paths import STORAGE_FOLDER
 
 
 class TableModel(QAbstractItemModel):
@@ -40,6 +41,8 @@ class TableModel(QAbstractItemModel):
         super(TableModel, self).__init__(parent)
 
         self._table = None
+        self.database_dir = None
+
         self._model = []
         self._ids = []
         self._ids_dict = {}
@@ -126,6 +129,12 @@ class TableModel(QAbstractItemModel):
         self._table.Cleared.connect(self.Clear)
         self._table.Updated.connect(self.Update)
 
+        file_ = database_table.database.file
+        if file_ == ":memory:":
+            self.database_dir = None
+        else:
+            self.database_dir = os.path.dirname(os.path.realpath(database_table.database.file))
+
         self.Clear()
         self.Update()
 
@@ -180,6 +189,15 @@ class TableModel(QAbstractItemModel):
     def GetDOIs(self, row):
         return self._table.GetRow(self.GetId(row), ("dois",))["dois"]
 
+    def GetFiles(self, row):
+        return self._table.GetRow(self.GetId(row), ("files",))["files"]
+
+    def GetFilePaths(self, row):
+        if self.database_dir is None:
+            return []
+
+        return [os.path.join(self.database_dir, STORAGE_FOLDER, f) for f in self.GetFiles(row)]
+
     def FilterSelection(self, ids):
         return [i for i in ids if i in self._ids]
 
@@ -220,6 +238,8 @@ class TableView(QTreeView):
 
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._HandleRightClickOnItem)
+
+        self.doubleClicked.connect(self._HandleDoubleClickOnItem)
 
         self.header().setContextMenuPolicy(Qt.CustomContextMenu)
         self.header().customContextMenuRequested.connect(self._HandleRightClickOnHeader)
@@ -270,7 +290,7 @@ class TableView(QTreeView):
 
     def startDrag(self, supportedActions):
         # We reimplement this to visualize a tooltip instead of entire rows while dragging.
-        
+
         rows = self.selectionModel().selectedRows()
         data = self.model().mimeData(rows)
 
@@ -281,7 +301,7 @@ class TableView(QTreeView):
         )
         pixmap = label.grab()
         pixmap.rect().adjust(10,10,0,0)
-        
+
         drag = QDrag(self)
         drag.setPixmap(pixmap)
         # drag.setDragCursor(pixmap, Qt.CopyAction)
@@ -315,6 +335,10 @@ class TableView(QTreeView):
             selection,
             QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         )
+
+    def _HandleDoubleClickOnItem(self, index):
+        for p in self.model().GetFilePaths(index.row()):
+            TableView._OpenLocalDocument(p)
 
     def _HandleRightClickOnHeader(self, position):
         menu = QMenu()
@@ -361,20 +385,30 @@ class TableView(QTreeView):
         action_references = menu.addAction(QIcon(icons.SEARCH), "Find references")
         action_citations = menu.addAction(QIcon(icons.SEARCH), "Find citations")
         menu.addSeparator()
+        if self.model().database_dir is not None:
+            files_menu = self._FilesMenu(row)
+            if files_menu is None:
+                action_files = menu.addAction(QIcon(icons.FILES), "Open Files")
+                action_files.setEnabled(False)
+            else:
+                action_files = menu.addMenu(files_menu)
+                action_files.setIcon(QIcon(icons.FILES))
+                action_files.setText("Open Files")
+            menu.addSeparator()
         action_delete = menu.addAction(QIcon(icons.DELETE), "Remove")
 
         arxiv_id = self.model().GetArXivId(row)
-        if arxiv_id == None:
+        if arxiv_id is None:
             action_arxiv_page.setEnabled(False)
             action_arxiv_pdf.setEnabled(False)
         else:
             arxiv_url = "https://arxiv.org/abs/" + arxiv_id
             action_arxiv_page.triggered.connect(partial(self._OpenURL, arxiv_url))
             pdf_url = "https://arxiv.org/pdf/" + arxiv_id + ".pdf"
-            action_arxiv_pdf.triggered.connect(partial(self._OpenPDF, pdf_url))
+            action_arxiv_pdf.triggered.connect(partial(self._OpenOnlineDocument, pdf_url))
 
         inspire_id = self.model().GetInspireId(row)
-        if inspire_id == None:
+        if inspire_id is None:
             action_inspire_page.setEnabled(False)
             action_references.setEnabled(False)
             action_citations.setEnabled(False)
@@ -400,6 +434,19 @@ class TableView(QTreeView):
 
         action_delete.triggered.connect(partial(self.model().DeleteRows, (row,)))
 
+        return menu
+
+    def _FilesMenu(self, row):
+        file_paths = self.model().GetFilePaths(row)
+        if len(file_paths) == 0:
+            return None
+
+        files = [os.path.basename(p) for p in file_paths]
+
+        menu = QMenu()
+        for (f, p) in zip(files, file_paths):
+            a = menu.addAction(f)
+            a.triggered.connect(partial(self._OpenLocalDocument, p))
         return menu
 
     def _SetColumnVisibility(self):
@@ -429,7 +476,11 @@ class TableView(QTreeView):
             self.header().resizeSection(2, self.header().sectionSize(2) - newSize + oldSize)
 
     @staticmethod
-    def _OpenPDF(url):
+    def _OpenLocalDocument(path):
+        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+
+    @staticmethod
+    def _OpenOnlineDocument(url):
         os.system("okular " + url + " &")
 
     @staticmethod
