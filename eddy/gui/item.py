@@ -384,7 +384,7 @@ class ItemWidget(QWidget):
         try:
             shutil.copy2(file_path, new_path)
         except:
-            QMessageBox.critical(None, "Error", "Cannot access storage folder.")
+            QMessageBox.critical(None, "Error", "Error while copying '" + file_name + "'.")
             return
 
         self._AppendFile(os.path.basename(new_path))

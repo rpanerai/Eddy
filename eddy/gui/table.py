@@ -113,11 +113,14 @@ class TableModel(QAbstractItemModel):
         return ["application/x-eddy"]
 
     def mimeData(self, indexes):
+        file_ = self._table.database.file
         ids = [self._ids[r] for r in list({i.row() for i in indexes})]
         records = [self._table.GetRow(i) for i in ids]
 
+        data_list = [file_, ids, records]
+
         data = QMimeData()
-        data.setData(self.mimeTypes()[0], QByteArray(json.dumps(records).encode("utf-8")))
+        data.setData(self.mimeTypes()[0], QByteArray(json.dumps(data_list).encode("utf-8")))
         return data
 
     def SetTable(self, database_table):
