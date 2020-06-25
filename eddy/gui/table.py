@@ -251,7 +251,8 @@ class TableView(QTreeView):
         self.header().geometriesChanged.connect(self._ResizeColumnsAtGeometryChange)
         self.header().sectionResized.connect(self._ResizeColumnsAtSectionResize)
 
-        self._column_visibility = {}
+        self._column_visibility = {h: True for h in TableModel.HEADERS}
+        self._show_citations = True
 
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
@@ -275,10 +276,6 @@ class TableView(QTreeView):
 
     def reset(self):
         super(TableView, self).reset()
-
-        for h in TableModel.HEADERS:
-            if h not in self._column_visibility:
-                self._column_visibility[h] = True
 
         self._SetColumnVisibility()
 
@@ -311,6 +308,12 @@ class TableView(QTreeView):
         drag.setMimeData(data)
         drag.setHotSpot(pixmap.rect().center())
         drag.exec_(Qt.CopyAction)
+
+    def SetShowCitations(self, show):
+        if self._show_citations is not show:
+            self._show_citations = show
+            self._SetColumnVisibility()
+            self._ResizeColumnsAtGeometryChange()
 
     def _SaveSelection(self):
         self._selected_ids = [
@@ -347,6 +350,8 @@ class TableView(QTreeView):
         menu = QMenu()
 
         for h in TableModel.HEADERS:
+            if not self._show_citations and h == "Citations":
+                continue
             a = menu.addAction(h)
             a.setCheckable(True)
             a.setChecked(self._column_visibility[h])
@@ -454,6 +459,9 @@ class TableView(QTreeView):
 
     def _SetColumnVisibility(self):
         for (i, h) in enumerate(TableModel.HEADERS):
+            if not self._show_citations and h == "Citations":
+                self.setColumnHidden(i, True)
+                continue
             self.setColumnHidden(i, not self._column_visibility[h])
 
     def _FlipColumnVisibility(self, header):

@@ -121,6 +121,7 @@ class TabContent(QWidget):
         self._search_bar.SetQueryEditEnabled(True)
         self._filter_bar.clear()
         self._database_table.Clear()
+        self._table_view.SetShowCitations(True)
         self._table_model.SetTable(self._database_table)
         self._item_widget.SetTable(self._database_table)
 
@@ -129,6 +130,7 @@ class TabContent(QWidget):
             self._web_source_active = False
             self._search_bar.Clear()
             self._search_bar.SetQueryEditEnabled(False)
+            self._table_view.SetShowCitations(False)
 
         self.TitleRequested.emit(icons.DATABASE, source.name)
         self._filter_bar.clear()
