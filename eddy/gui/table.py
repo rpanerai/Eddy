@@ -107,8 +107,6 @@ class TableModel(QAbstractItemModel):
         self._CreateSortFilterMap()
         self.layoutChanged.emit()
 
-        self._RequestSelection()
-
     def mimeTypes(self):
         return ["application/x-eddy"]
 
@@ -138,6 +136,7 @@ class TableModel(QAbstractItemModel):
         else:
             self.database_dir = os.path.dirname(os.path.realpath(database_table.database.file))
 
+        # By first clearing, we empy _selected_ids in the view.
         self.Clear()
         self.Update()
 
@@ -264,12 +263,16 @@ class TableView(QTreeView):
     def setModel(self, model):
         if self.model() is not None:
             model.modelAboutToBeReset.disconnect(self._SaveSelection)
+            model.layoutAboutToBeChanged.disconnect(self._SaveSelection)
             model.modelReset.disconnect(self._RestoreSelection)
+            model.layoutChanged.disconnect(self._RestoreSelection)
 
         super(TableView, self).setModel(model)
 
         model.modelAboutToBeReset.connect(self._SaveSelection)
+        model.layoutAboutToBeChanged.connect(self._SaveSelection)
         model.modelReset.connect(self._RestoreSelection)
+        model.layoutChanged.connect(self._RestoreSelection)
 
         self._ResetColumnsSize()
         self._ResizeColumnsAtGeometryChange()
