@@ -6,7 +6,8 @@ from PySide2.QtWidgets import (
 )
 
 from eddy.network.fetcher import Fetcher
-from eddy.data.database import Database, Table
+from eddy.data.database import Database
+from eddy.data.items import ItemsTable
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemWidget
 from eddy.gui.searchfilter import SearchBar, FilterBar
@@ -21,8 +22,8 @@ class TabContent(QWidget):
     def __init__(self, index, source_model, memory_database, parent=None):
         super(TabContent, self).__init__(parent)
 
-        self._database_table = Table(memory_database, "tab" + str(index), drop_on_del=True)
-        # self._database_table = Table(Database("./test"), "items", drop_on_del=False)
+        self._database_table = ItemsTable(memory_database, "tab" + str(index), drop_on_del=True)
+        # self._database_table = ItemsTable(Database("./test.db"), "items", drop_on_del=False)
         self._database_table.Clear()
 
         self._fetcher = Fetcher()

@@ -1,5 +1,4 @@
 import sqlite3
-import json
 
 from PySide2.QtCore import QObject, Signal
 
@@ -20,92 +19,13 @@ class Table(QObject):
     Cleared = Signal()
     Updated = Signal()
 
-    _KEYS = {
-        "id": "INTEGER PRIMARY KEY",
-        "type": "TEXT",
-        "date": "TEXT",
-        "authors": "TEXT",
-        "authors_bais": "TEXT",
-        "editors": "TEXT",
-        "editors_bais": "TEXT",
-        "title": "TEXT",
-        "abstract": "TEXT",
-        "publication": "TEXT",
-        "volume": "TEXT",
-        "year": "INTEGER",
-        "issue": "TEXT",
-        "pages": "TEXT",
-        "edition": "TEXT",
-        "series": "TEXT",
-        "publisher": "TEXT",
-        "isbns": "TEXT",
-        "institution": "TEXT",
-        "degree": "TEXT",
-        "citations": "INTEGER",
-        "inspire_id": "INTEGER",
-        "texkey": "TEXT",
-        "arxiv_id": "TEXT",
-        "dois": "TEXT",
-        "urls": "TEXT",
-        "notes": "TEXT",
-        "files": "TEXT",
-        "tags": "TEXT"
-    }
+    _KEYS = {"id": "INTEGER PRIMARY KEY"}
 
-    _DEFAULTS = {
-        "type": None,
-        "date": None,
-        "authors": [],
-        "authors_bais": [],
-        "editors": [],
-        "editors_bais": [],
-        "title": None,
-        "abstract": None,
-        "publication": None,
-        "volume": None,
-        "year": None,
-        "issue": None,
-        "pages": None,
-        "edition": None,
-        "series": None,
-        "publisher": None,
-        "isbns": [],
-        "institution": None,
-        "degree": None,
-        "citations": None,
-        "inspire_id": None,
-        "texkey": None,
-        "arxiv_id": None,
-        "dois": [],
-        "urls": [],
-        "notes": None,
-        "files": [],
-        "tags": []
-    }
+    _DEFAULTS = {}
 
-    _ENCODE_FUNCTIONS = {
-        "authors": json.dumps,
-        "authors_bais": json.dumps,
-        "editors": json.dumps,
-        "editors_bais": json.dumps,
-        "isbns": json.dumps,
-        "dois": json.dumps,
-        "urls": json.dumps,
-        "files": json.dumps,
-        "tags": json.dumps
-    }
+    _ENCODE_FUNCTIONS = {}
 
-    _DECODE_FUNCTIONS = {
-        "authors": json.loads,
-        "authors_bais": json.loads,
-        "editors": json.loads,
-        "editors_bais": json.loads,
-        "isbns": json.loads,
-        "dois": json.loads,
-        "urls": json.loads,
-        "files": json.loads,
-        "tags": json.loads
-    }
+    _DECODE_FUNCTIONS = {}
 
     def __init__(self, database, name, drop_on_del=False, parent=None):
         super(Table, self).__init__(parent)
@@ -125,7 +45,7 @@ class Table(QObject):
         cursor = self._connection.cursor()
         cursor.execute("DROP TABLE IF EXISTS " + self._name)
 
-        keys = ", ".join([k + " " + t for k, t in Table._KEYS.items()])
+        keys = ", ".join([k + " " + t for k, t in self._KEYS.items()])
         cursor.execute("CREATE TABLE " + self._name + " (" + keys + ")")
 
         self.Cleared.emit()
@@ -138,7 +58,7 @@ class Table(QObject):
         query = "INSERT INTO " + self._name + keys_str + " VALUES " + placeholder
         values = [
             tuple(
-                Table._ENCODE_FUNCTIONS.get(k, lambda x: x)(d.get(k, self._DEFAULTS[k]))
+                self._ENCODE_FUNCTIONS.get(k, lambda x: x)(d.get(k, self._DEFAULTS[k]))
                 for k in keys
             )
             for d in data
@@ -157,56 +77,50 @@ class Table(QObject):
 
         self.Updated.emit()
 
-    def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=()):
-        keys = list({k for k in keys if k in Table._KEYS.keys()})
-        n_strings = len(filter_strings)
-
-        query = "SELECT " + ", ".join(keys) + " FROM " + self._name
-        if n_strings > 0:
-            query = query + " WHERE authors || title LIKE ?"
-        if n_strings > 1:
-            query = query + (" AND authors || title LIKE ?" * (n_strings - 1))
-        if sort_key is not None:
-            query = query + " ORDER BY " + sort_key + " " + sort_order
-
-        patterns = tuple("%" + f + "%" for f in filter_strings)
-
-        cursor = self._connection.cursor()
-        cursor.execute(query, patterns)
-        data = [dict(zip(keys, t)) for t in cursor.fetchall()]
-        for k in Table._DECODE_FUNCTIONS:
-            if k in keys:
-                for d in data:
-                    d[k] = Table._DECODE_FUNCTIONS[k](d[k])
-
-        return data
-
     def GetRow(self, id_, keys=None):
-        if keys == None:
-            keys = Table._DEFAULTS.keys()
+        if keys is None:
+            keys_ = self._DEFAULTS.keys()
         else:
-            list({k for k in keys if k in Table._DEFAULTS.keys()})
+            keys_ = list({k for k in keys if k in self._DEFAULTS.keys()})
 
-        query = "SELECT " + ", ".join(keys) + " FROM " + self._name + " WHERE id = " + str(id_)
+        query = "SELECT " + ", ".join(keys_) + " FROM " + self._name + " WHERE id = " + str(id_)
 
         cursor = self._connection.cursor()
         cursor.execute(query)
-        data = dict(zip(keys, cursor.fetchone()))
-        for k in Table._DECODE_FUNCTIONS:
-            if k in keys:
-                data[k] = Table._DECODE_FUNCTIONS[k](data[k])
+        data = dict(zip(keys_, cursor.fetchone()))
+        for k in self._DECODE_FUNCTIONS:
+            if k in keys_:
+                data[k] = self._DECODE_FUNCTIONS[k](data[k])
+
+        return data
+
+    def GetTable(self, keys=None):
+        if keys is None:
+            keys_ = self._KEYS.keys()
+        else:
+            keys_ = list({k for k in keys if k in self._KEYS.keys()})
+
+        query = "SELECT " + ", ".join(keys_) + " FROM " + self._name
+
+        cursor = self._connection.cursor()
+        cursor.execute(query)
+        data = [dict(zip(keys_, t)) for t in cursor.fetchall()]
+        for k in self._DECODE_FUNCTIONS:
+            if k in keys_:
+                for d in data:
+                    d[k] = self._DECODE_FUNCTIONS[k](d[k])
 
         return data
 
     def EditRow(self, id_, data):
-        keys = [k for k in data.keys() if k in Table._DEFAULTS.keys()]
+        keys = [k for k in data.keys() if k in self._DEFAULTS.keys()]
 
         keys_str = "(" + ', '.join(keys) + ")"
         placeholder = "(" + ', '.join('?' * len(keys)) + ")"
 
         query = "UPDATE " + self._name + " SET " + keys_str + " = " + placeholder + " WHERE id = ?"
 
-        values = [Table._ENCODE_FUNCTIONS.get(k, lambda x: x)(data[k]) for k in keys]
+        values = [self._ENCODE_FUNCTIONS.get(k, lambda x: x)(data[k]) for k in keys]
         values.append(id_)
         values = tuple(values)
 
