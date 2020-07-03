@@ -21,7 +21,7 @@ class MainWindow(QMainWindow):
                 Qt.LeftToRight,
                 Qt.AlignCenter,
                 QSize(1100, 720),
-                application.desktop().availableGeometry(self)
+                self.screen().availableGeometry()
             )
         )
 
