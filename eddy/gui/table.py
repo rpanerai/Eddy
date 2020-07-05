@@ -486,7 +486,7 @@ class TableView(QTreeView):
 
         menu = QMenu()
         for (f, p) in zip(files, file_paths):
-            a = menu.addAction(f)
+            a = menu.addAction(QIcon(icons.FILE), f)
             a.triggered.connect(partial(self._OpenLocalDocument, p))
         return menu
 

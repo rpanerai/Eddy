@@ -11,6 +11,7 @@ BREEZE_FOLDER = os.path.join(ICONS_FOLDER, "breeze")
 
 DATABASE = os.path.join(BREEZE_FOLDER, "database.svg")
 DELETE = os.path.join(BREEZE_FOLDER, "delete.svg")
+FILE = os.path.join(BREEZE_FOLDER, "file.svg")
 FILES = os.path.join(BREEZE_FOLDER, "files.svg")
 FILE_ADD = os.path.join(BREEZE_FOLDER, "file_add.svg")
 FILTER = os.path.join(BREEZE_FOLDER, "filter.svg")
