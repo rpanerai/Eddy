@@ -126,3 +126,5 @@ class Table(QObject):
 
         cursor = self._connection.cursor()
         cursor.execute(query, values)
+
+        self.Updated.emit()

@@ -94,19 +94,27 @@ class ItemsTable(Table):
     def __init__(self, database, name="items", drop_on_del=False, parent=None):
         super(ItemsTable, self).__init__(database, name, drop_on_del, parent)
 
-    def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=()):
+    def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=(), tags=()):
         keys = list({k for k in keys if k in self._KEYS.keys()})
-        n_strings = len(filter_strings)
+
+        where_clauses = []
+        if (n_filters := len(filter_strings)) > 0:
+            where_clauses.append("(" + " AND ".join(["authors || title LIKE ?"] * n_filters) + ")")
+        if (n_tags := len(tags)) > 0:
+            format_tags = "replace(replace(replace(tags, '[', ' '), ']', ' '), ',', '')"
+            where_clauses.append("(" + " OR ".join([format_tags + " LIKE ?"] * n_tags) + ")")
+        where_string = " AND ".join(where_clauses)
 
         query = "SELECT " + ", ".join(keys) + " FROM " + self._name
-        if n_strings > 0:
-            query = query + " WHERE authors || title LIKE ?"
-        if n_strings > 1:
-            query = query + (" AND authors || title LIKE ?" * (n_strings - 1))
+        if where_string != "":
+            query = query + " WHERE " + where_string
         if sort_key is not None:
             query = query + " ORDER BY " + sort_key + " " + sort_order
 
-        patterns = tuple("%" + f + "%" for f in filter_strings)
+        patterns = (
+            tuple("%" + f + "%" for f in filter_strings)
+            + tuple("% " + str(t) + " %" for t in tags)
+        )
 
         cursor = self._connection.cursor()
         cursor.execute(query, patterns)

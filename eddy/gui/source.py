@@ -45,6 +45,32 @@ class LocalSource:
         self.table = ItemsTable(self.database)
         self.tags_table = TagsTable(self.database)
 
+    def AssignToTag(self, ids, tag_id):
+        for i in ids:
+            r = self.table.GetRow(i, ("tags",))
+            if tag_id not in r["tags"]:
+                r["tags"].append(tag_id)
+                self.table.EditRow(i, r)
+
+    def DropTagFromItem(self, id_, tag_id):
+        record = self.table.GetRow(id_, ("tags",))
+        record["tags"].remove(tag_id)
+        self.table.EditRow(id_, record)
+
+    def DropTag(self, tag_id):
+        items = self.table.GetTable(("id", "tags"), tags=(tag_id,))
+        for i in items:
+            i["tags"].remove(tag_id)
+            self.table.EditRow(i["id"], {"tags": i["tags"]})
+
+    def TagNames(self):
+        tags = self.tags_table.GetTable()
+        return [t["name"] for t in tags]
+
+    def TagMap(self):
+        tags = self.tags_table.GetTable()
+        return {t["id"]: t["name"] for t in tags}
+
 
 class Tag:
     def __init__(self, source, id_, name, parent):
@@ -58,7 +84,13 @@ class Tag:
         self.name = name
 
     def Delete(self):
-        Tag._DeleteIdAndChildren(self.source, self.id)
+        self._DeleteIdAndChildren(self.id)
+
+    def _DeleteIdAndChildren(self, id_):
+        self.source.tags_table.Delete((id_,))
+        self.source.DropTag(id_)
+        for t in self.source.tags_table.GetTable(id_):
+            self._DeleteIdAndChildren(t["id"])
 
     @classmethod
     def CreateFromSource(cls, source, name, parent):
@@ -71,17 +103,6 @@ class Tag:
             cls(source, t["id"], t["name"], parent)
             for t in source.tags_table.GetTable(parent)
         ]
-
-    @staticmethod
-    def _DeleteIdAndChildren(source, id_):
-        source.tags_table.Delete((id_,))
-        for t in source.tags_table.GetTable(id_):
-            Tag._DeleteIdAndChildren(source, t["id"])
-
-    @staticmethod
-    def TagNames(source):
-        tags = source.tags_table.GetTable()
-        return [t["name"] for t in tags]
 
 
 class WebSearch(SimpleNamespace):
@@ -104,7 +125,7 @@ class SourceModel(QStandardItemModel):
     ROOT_FLAGS = Qt.ItemIsEnabled
     WEB_SOURCE_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable
     LOCAL_SOURCE_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
-    TAG_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
+    TAG_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsDropEnabled
 
     def __init__(self, parent=None):
         super(SourceModel, self).__init__(parent)
@@ -148,26 +169,110 @@ class SourceModel(QStandardItemModel):
             return False
 
         target = self.itemFromIndex(parent).data()
-        if not isinstance(target, LocalSource):
-            return False
+        if isinstance(target, LocalSource):
+            # Prevent drops when origin and target databases coincide
+            origin_file = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))[0]
+            return target.database.file != origin_file
 
-        # Prevent drops when origin and target databases coincide
-        origin_file = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))[0]
-        if target.database.file == origin_file:
-            return False
+        if isinstance(target, Tag):
+            # Accept drops only for tags in the origin database
+            origin_file = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))[0]
+            return target.source.database.file == origin_file
 
-        return True
+        return False
 
     def dropMimeData(self, data, action, row, column, parent):
-        (origin_file, _, records) = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))
+        (origin_file, ids, records) = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))
+        target = self.itemFromIndex(parent).data()
 
+        if isinstance(target, LocalSource):
+            return SourceModel._DropIntoSource(target, origin_file, records)
+
+        if isinstance(target, Tag):
+            target.source.AssignToTag(ids, target.id)
+            return True
+
+    def AddTag(self, item, view):
+        data = item.data()
+        if isinstance(data, LocalSource):
+            source = data
+            parent = 0
+        else:
+            source = data.source
+            parent = data.id
+
+        tag = Tag(source, None, "", parent)
+        tag_item = SourceModel._CreateItemFromData(tag)
+
+        item.insertRow(0, tag_item)
+        item.setChild(0, tag_item)
+
+        view.setExpanded(self.indexFromItem(item), True)
+        self.TagBeingCreated = tag_item
+        # view.setCurrentIndex(self.indexFromItem(tag_item))
+        view.edit(self.indexFromItem(tag_item))
+
+    def HandleNoUpdate(self):
+        if self.TagBeingCreated is None:
+            return
+        self.RemoveTag(self.TagBeingCreated)
+        self.TagBeingCreated = None
+
+    def RemoveTag(self, item):
+        tag = item.data()
+        if tag.id is not None:
+            tag.Delete()
+
+        parent = self.indexFromItem(item.parent())
+        self.removeRow(item.row(), parent)
+
+    @staticmethod
+    def ChildTagIds(item):
+        ids = []
+        i = 0
+        while (c := item.child(i)) is not None:
+            ids.append(c.data().id)
+            ids = ids + SourceModel.ChildTagIds(c)
+            i = i + 1
+        return ids
+
+    @staticmethod
+    def _CreateItemFromData(data):
+        if isinstance(data, WebSource):
+            item = QStandardItem(QIcon(data.icon), data.name)
+            item.setFlags(SourceModel.WEB_SOURCE_FLAGS)
+        elif isinstance(data, LocalSource):
+            item = QStandardItem(QIcon(icons.DATABASE), data.name)
+            item.setFlags(SourceModel.LOCAL_SOURCE_FLAGS)
+        elif isinstance(data, Tag):
+            item = QStandardItem(QIcon(icons.TAG), data.name)
+            item.setFlags(SourceModel.TAG_FLAGS)
+
+        item.setData(data)
+        return item
+
+    @staticmethod
+    def _AppendTags(source, item):
+        data = item.data()
+        if isinstance(data, LocalSource):
+            parent = 0
+        else:
+            parent = data.id
+
+        for (r, t) in enumerate(Tag.ListFromParent(source, parent)):
+            i = SourceModel._CreateItemFromData(t)
+            item.setChild(r, i)
+            SourceModel._AppendTags(source, i)
+
+    @staticmethod
+    def _DropIntoSource(target, origin_file, records):
         # In copying items, we drop their citations and tags fields.
         for d in records:
             d.pop("citations")
             d.pop("tags")
 
         if origin_file == ":memory:":
-            self.itemFromIndex(parent).data().table.AddData(records)
+            target.table.AddData(records)
             return True
 
         files = []
@@ -175,14 +280,14 @@ class SourceModel(QStandardItemModel):
             files = files + d["files"]
         files = set(files)
         if len(files) == 0:
-            self.itemFromIndex(parent).data().table.AddData(records)
+            target.table.AddData(records)
             return True
 
-        target_file = self.itemFromIndex(parent).data().database.file
+        target_file = target.database.file
         origin_dir = os.path.join(os.path.dirname(os.path.realpath(origin_file)), STORAGE_FOLDER)
         target_dir = os.path.join(os.path.dirname(os.path.realpath(target_file)), STORAGE_FOLDER)
         if target_dir == origin_dir:
-            self.itemFromIndex(parent).data().table.AddData(records)
+            target.table.AddData(records)
             return True
 
         if not os.path.isdir(target_dir):
@@ -224,76 +329,14 @@ class SourceModel(QStandardItemModel):
                 )
                 return False
 
-        self.itemFromIndex(parent).data().table.AddData(records)
+        target.table.AddData(records)
         return True
-
-    def AddTag(self, item, view):
-        data = item.data()
-        if isinstance(data, LocalSource):
-            source = data
-            parent = 0
-        else:
-            source = data.source
-            parent = data.id
-
-        tag = Tag(source, None, "", parent)
-        tag_item = SourceModel._CreateItemFromData(tag)
-
-        item.insertRow(0, tag_item)
-        item.setChild(0, tag_item)
-
-        view.setExpanded(self.indexFromItem(item), True)
-        self.TagBeingCreated = tag_item
-        # view.setCurrentIndex(self.indexFromItem(tag_item))
-        view.edit(self.indexFromItem(tag_item))
-
-    def HandleNoUpdate(self):
-        if self.TagBeingCreated is None:
-            return
-        self.RemoveTag(self.TagBeingCreated)
-        self.TagBeingCreated = None
-
-    def RemoveTag(self, item):
-        tag = item.data()
-        if tag.id is not None:
-            tag.Delete()
-
-        parent = self.indexFromItem(item.parent())
-        self.removeRow(item.row(), parent)
-
-    @staticmethod
-    def _CreateItemFromData(data):
-        if type(data) == WebSource:
-            item = QStandardItem(QIcon(data.icon), data.name)
-            item.setFlags(SourceModel.WEB_SOURCE_FLAGS)
-        elif type(data) == LocalSource:
-            item = QStandardItem(QIcon(icons.DATABASE), data.name)
-            item.setFlags(SourceModel.LOCAL_SOURCE_FLAGS)
-        elif type(data) == Tag:
-            item = QStandardItem(QIcon(icons.TAG), data.name)
-            item.setFlags(SourceModel.TAG_FLAGS)
-
-        item.setData(data)
-        return item
-
-    @staticmethod
-    def _AppendTags(source, item):
-        data = item.data()
-        if isinstance(data, LocalSource):
-            parent = 0
-        else:
-            parent = data.id
-
-        for (r, t) in enumerate(Tag.ListFromParent(source, parent)):
-            i = SourceModel._CreateItemFromData(t)
-            item.setChild(r, i)
-            SourceModel._AppendTags(source, i)
 
 
 class SourcePanel(QTreeView):
     SearchRequested = Signal(dict)
     WebSourceSelected = Signal()
-    LocalSourceSelected = Signal(LocalSource)
+    LocalSourceSelected = Signal(LocalSource, list)
     # SourceSelected = Signal((WebSource,), (LocalSource,))
 
     def __init__(self, parent=None):
@@ -356,15 +399,17 @@ class SourcePanel(QTreeView):
         if rows == []:
             return
 
-        data = self.model().itemFromIndex(rows[0]).data()
+        item = self.model().itemFromIndex(rows[0])
+        data = item.data()
+        tag_ids = []
         if isinstance(data, Tag):
             source = data.source
-            # Emit appropriate signal
+            tag_ids = [data.id] + self.model().ChildTagIds(item)
         else:
             source = data
 
         if isinstance(source, LocalSource):
-            self.LocalSourceSelected.emit(source)
+            self.LocalSourceSelected.emit(source, tag_ids)
         else:
             self.WebSourceSelected.emit()
 
@@ -450,7 +495,7 @@ class SourceDelegate(QStyledItemDelegate):
         editor.setText(editor.text().strip())
         item = model.itemFromIndex(index)
 
-        tag_names = Tag.TagNames(item.data().source)
+        tag_names = item.data().source.TagNames()
         if editor.text() in tag_names + [""]:
             self.EditorNoUpdate.emit()
             # Possibly, display an error message.

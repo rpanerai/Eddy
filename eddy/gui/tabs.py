@@ -126,7 +126,7 @@ class TabContent(QWidget):
         self._table_model.SetTable(self._database_table)
         self._item_widget.SetTable(self._database_table)
 
-    def _HandleLocalSourceSelected(self, source):
+    def _HandleLocalSourceSelected(self, source, tag_ids):
         if self._web_source_active:
             self._web_source_active = False
             self._search_bar.Clear()
@@ -136,7 +136,8 @@ class TabContent(QWidget):
         self.TitleRequested.emit(icons.DATABASE, source.name)
         self._filter_bar.clear()
         self._status_bar.clearMessage()
-        self._table_model.SetTable(source.table)
+        self._table_model.SetLocalSource(source)
+        self._table_model.SetTags(tag_ids)
         self._item_widget.SetTable(source.table)
 
     def _HandleSearchRequested(self, search):

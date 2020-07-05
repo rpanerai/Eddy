@@ -40,8 +40,8 @@ class TableModel(QAbstractItemModel):
     def __init__(self, parent=None):
         super(TableModel, self).__init__(parent)
 
+        self.source = None
         self._table = None
-        self.database_dir = None
 
         self._model = []
         self._ids = []
@@ -51,6 +51,7 @@ class TableModel(QAbstractItemModel):
         self._sort_key = "id"
         self._sort_order = "ASC"
 
+        self._tags = []
         self._filter_strings = []
 
     def rowCount(self, parent=QModelIndex()):
@@ -121,7 +122,23 @@ class TableModel(QAbstractItemModel):
         data.setData(self.mimeTypes()[0], QByteArray(json.dumps(data_list).encode("utf-8")))
         return data
 
+    def SetLocalSource(self, source):
+        if self.source == source:
+            return
+
+        self.source = source
+        self._SetTable(source.table)
+
     def SetTable(self, database_table):
+        if self._table == database_table:
+            return
+
+        self.source = None
+        self._SetTable(database_table)
+
+    def _SetTable(self, database_table):
+        self._tags = []
+
         if self._table is not None:
             self._table.Cleared.disconnect(self.Clear)
             self._table.Updated.disconnect(self.Update)
@@ -130,15 +147,15 @@ class TableModel(QAbstractItemModel):
         self._table.Cleared.connect(self.Clear)
         self._table.Updated.connect(self.Update)
 
-        file_ = database_table.database.file
-        if file_ == ":memory:":
-            self.database_dir = None
-        else:
-            self.database_dir = os.path.dirname(os.path.realpath(database_table.database.file))
-
         # By first clearing, we empy _selected_ids in the view.
         self.Clear()
         self.Update()
+
+    def SetTags(self, tag_ids):
+        self._tags = tag_ids
+        self.Filter(self._filter_strings)
+        # Is this the correct way of doing this?
+        # No. One should probably call filter directly. Or maybe not...
 
     def Clear(self):
         self.beginResetModel()
@@ -191,14 +208,17 @@ class TableModel(QAbstractItemModel):
     def GetDOIs(self, row):
         return self._table.GetRow(self.GetId(row), ("dois",))["dois"]
 
+    def GetTags(self, row):
+        return self._table.GetRow(self.GetId(row), ("tags",))["tags"]
+
     def GetFiles(self, row):
         return self._table.GetRow(self.GetId(row), ("files",))["files"]
 
     def GetFilePaths(self, row):
-        if self.database_dir is None:
+        if self.source is None:
             return []
-
-        return [os.path.join(self.database_dir, STORAGE_FOLDER, f) for f in self.GetFiles(row)]
+        dir_ = os.path.dirname(os.path.realpath(self._table.database.file))
+        return [os.path.join(dir_, STORAGE_FOLDER, f) for f in self.GetFiles(row)]
 
     def FilterSelection(self, ids):
         return [i for i in ids if i in self._ids]
@@ -215,7 +235,8 @@ class TableModel(QAbstractItemModel):
             ("id",),
             self._sort_key,
             self._sort_order,
-            self._filter_strings
+            self._filter_strings,
+            self._tags
         )
         self._ids = [d["id"] for d in ids]
         self._model_map = [self._ids_dict[i] for i in self._ids]
@@ -396,15 +417,24 @@ class TableView(QTreeView):
         action_references = menu.addAction(QIcon(icons.SEARCH), "Find references")
         action_citations = menu.addAction(QIcon(icons.SEARCH), "Find citations")
         menu.addSeparator()
-        if self.model().database_dir is not None:
+        if self.model().source is not None:
             files_menu = self._FilesMenu(row)
             if files_menu is None:
-                action_files = menu.addAction(QIcon(icons.FILES), "Open Files")
+                action_files = menu.addAction(QIcon(icons.FILES), "Open files")
                 action_files.setEnabled(False)
             else:
                 action_files = menu.addMenu(files_menu)
                 action_files.setIcon(QIcon(icons.FILES))
-                action_files.setText("Open Files")
+                action_files.setText("Open files")
+            menu.addSeparator()
+            tags_menu = self._TagsMenu(row)
+            if tags_menu is None:
+                action_tags = menu.addAction(QIcon(icons.STOP), "Drop tags")
+                action_tags.setEnabled(False)
+            else:
+                action_tags = menu.addMenu(tags_menu)
+                action_tags.setIcon(QIcon(icons.STOP))
+                action_tags.setText("Drop tags")
             menu.addSeparator()
         action_delete = menu.addAction(QIcon(icons.DELETE), "Remove")
 
@@ -458,6 +488,19 @@ class TableView(QTreeView):
         for (f, p) in zip(files, file_paths):
             a = menu.addAction(f)
             a.triggered.connect(partial(self._OpenLocalDocument, p))
+        return menu
+
+    def _TagsMenu(self, row):
+        tags = self.model().GetTags(row)
+        if len(tags) == 0:
+            return None
+
+        menu = QMenu()
+        for t in tags:
+            a = menu.addAction(QIcon(icons.TAG), self.model().source.TagMap()[t])
+            a.triggered.connect(
+                partial(self.model().source.DropTagFromItem, self.model().GetId(row), t)
+            )
         return menu
 
     def _SetColumnVisibility(self):
