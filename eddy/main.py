@@ -20,7 +20,7 @@ class MainWindow(QMainWindow):
             QStyle.alignedRect(
                 Qt.LeftToRight,
                 Qt.AlignCenter,
-                QSize(1100, 720),
+                QSize(1200, 720),
                 self.screen().availableGeometry()
             )
         )
