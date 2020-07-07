@@ -153,9 +153,7 @@ class TableModel(QAbstractItemModel):
 
     def SetTags(self, tag_ids):
         self._tags = tag_ids
-        self.Filter(self._filter_strings)
-        # Is this the correct way of doing this?
-        # No. One should probably call filter directly. Or maybe not...
+        self._Filter()
 
     def Clear(self):
         self.beginResetModel()
@@ -185,7 +183,9 @@ class TableModel(QAbstractItemModel):
 
     def Filter(self, filter_strings):
         self._filter_strings = filter_strings
+        self._Filter()
 
+    def _Filter(self):
         if self._model == []:
             return
 
@@ -217,7 +217,11 @@ class TableModel(QAbstractItemModel):
     def GetFilePaths(self, row):
         if self.source is None:
             return []
-        dir_ = os.path.dirname(os.path.realpath(self._table.database.file))
+
+        dir_ = self.source.FilesDir()
+        if dir_ is None:
+            return []
+
         return [os.path.join(dir_, STORAGE_FOLDER, f) for f in self.GetFiles(row)]
 
     def FilterSelection(self, ids):
@@ -324,7 +328,7 @@ class TableView(QTreeView):
             "font-weight: bold; color : white; background-color : black; border: 1px solid grey"
         )
         pixmap = label.grab()
-        pixmap.rect().adjust(10,10,0,0)
+        pixmap.rect().adjust(10, 10, 0, 0)
 
         drag = QDrag(self)
         drag.setPixmap(pixmap)

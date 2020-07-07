@@ -10,7 +10,7 @@ from PySide2.QtWidgets import (
     QTreeView, QAbstractItemView, QAbstractItemDelegate, QStyledItemDelegate, QMenu, QMessageBox
 )
 
-from paths import ROOT_DIR, STORAGE_FOLDER, LOCAL_DATABASES
+from paths import STORAGE_FOLDER, LOCAL_DATABASES
 from eddy.icons import icons
 from eddy.network.inspire import InspirePlugin
 from eddy.network.arxiv import ArXivPlugin
@@ -44,6 +44,37 @@ class LocalSource:
         self.database = Database(file)
         self.table = ItemsTable(self.database)
         self.tags_table = TagsTable(self.database)
+
+    def FilesDir(self):
+        dir_ = os.path.join(os.path.dirname(os.path.realpath(self.database.file)), STORAGE_FOLDER)
+        if not os.path.isdir(dir_):
+            try:
+                os.mkdir(dir_)
+            except:
+                return None
+        return dir_
+
+    def SaveFiles(self, paths):
+        files_dir = self.FilesDir()
+
+        copies = []
+        renamings = {}
+        for path in paths:
+            file_ = os.path.basename(path)
+            new_path = os.path.join(files_dir, file_)
+            i = 1
+            while os.path.exists(new_path):
+                i = i + 1
+                (body, ext) = os.path.splitext(new_path)
+                new_path = body + "(" + str(i) + ")" + ext
+            copies.append((path, new_path))
+            if i > 1:
+                renamings[file_] = os.path.basename(new_path)
+
+        for c in copies:
+            shutil.copy2(*c)
+
+        return renamings
 
     def AssignToTag(self, ids, tag_id):
         for i in ids:
@@ -271,6 +302,7 @@ class SourceModel(QStandardItemModel):
             d.pop("citations")
             d.pop("tags")
 
+        # If no files are involved in the drop action, simply add the items to the target database.
         if origin_file == ":memory:":
             target.table.AddData(records)
             return True
@@ -283,54 +315,32 @@ class SourceModel(QStandardItemModel):
             target.table.AddData(records)
             return True
 
-        target_file = target.database.file
+        # If the Files folder is shared between origin and target, there is no need to copy files.
         origin_dir = os.path.join(os.path.dirname(os.path.realpath(origin_file)), STORAGE_FOLDER)
-        target_dir = os.path.join(os.path.dirname(os.path.realpath(target_file)), STORAGE_FOLDER)
+        target_dir = target.FilesDir()
         if target_dir == origin_dir:
             target.table.AddData(records)
             return True
 
-        if not os.path.isdir(target_dir):
-            try:
-                os.mkdir(target_dir)
-            except:
-                QMessageBox.critical(
-                    None,
-                    "Error",
-                    "Cannot access storage folder. Drop action aborted."
-                )
-                return False
+        # Check that the Files folder is accessible.
+        if target_dir is None:
+            QMessageBox.critical(
+                None, "Error", "Cannot access storage folder. Drop action aborted."
+            )
+            return False
 
-        # Rename files if a file with the same name already exists in the target folder
-        copies = []
-        renamings = {}
-        for f in files:
-            file_path = os.path.join(origin_dir, f)
-            new_path = os.path.join(target_dir, f)
-            i = 1
-            while os.path.exists(new_path):
-                i = i + 1
-                (body, ext) = os.path.splitext(new_path)
-                new_path = body + "(" + str(i) + ")" + ext
-            copies.append((file_path, new_path))
-            if i > 1:
-                renamings[f] = os.path.basename(new_path)
-        for r in records:
-            r["files"] = [renamings.get(f, f) for f in r["files"]]
-
-        for c in copies:
-            try:
-                shutil.copy2(*c)
-            except:
-                QMessageBox.critical(
-                    None,
-                    "Error",
-                    "Error while copying '" + c[0] + "'. Drop action aborted."
-                )
-                return False
-
-        target.table.AddData(records)
-        return True
+        # Copy files in the target folder and add the items to the target database.
+        paths = [os.path.join(origin_dir, f) for f in files]
+        try:
+            renamings = target.SaveFiles(paths)
+        except:
+            QMessageBox.critical(None, "Error", "Error while copying files. Drop action aborted.")
+            return False
+        else:
+            for r in records:
+                r["files"] = [renamings.get(f, f) for f in r["files"]]
+            target.table.AddData(records)
+            return True
 
 
 class SourcePanel(QTreeView):

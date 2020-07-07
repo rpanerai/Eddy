@@ -138,7 +138,7 @@ class TabContent(QWidget):
         self._status_bar.clearMessage()
         self._table_model.SetLocalSource(source)
         self._table_model.SetTags(tag_ids)
-        self._item_widget.SetTable(source.table)
+        self._item_widget.SetLocalSource(source)
 
     def _HandleSearchRequested(self, search):
         self._database_table.Clear()

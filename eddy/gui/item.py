@@ -1,6 +1,5 @@
 from datetime import datetime
 import os
-import shutil
 
 from PySide2.QtCore import Signal
 from PySide2.QtGui import QFont, QIcon
@@ -69,8 +68,8 @@ class ItemWidget(QWidget):
     def __init__(self, parent=None):
         super(ItemWidget, self).__init__(parent)
 
+        self._source = None
         self._table = None
-        self._database_dir = None
         self._id = -1
 
         self._updating = False
@@ -350,44 +349,28 @@ class ItemWidget(QWidget):
         self.ItemUpdated.emit()
 
     def _AddFile(self):
+        files_dir = self._source.FilesDir()
+        if files_dir is None:
+            QMessageBox.critical(None, "Error", "Cannot access storage folder.")
+            return
+
         (file_path, _) = QFileDialog.getOpenFileName(
-            None,
-            "Open Document",
-            self._database_dir,
-            "Documents (*.pdf *.djvu)"
+            None, "Open Document", files_dir, "Documents (*.pdf *.djvu)"
         )
         if file_path == "":
             return
-
-        files_dir = os.path.join(self._database_dir, STORAGE_FOLDER)
-
-        if not os.path.isdir(files_dir):
-            try:
-                os.mkdir(files_dir)
-            except:
-                QMessageBox.critical(None, "Error", "Cannot access storage folder.")
-                return
-
         file_name = os.path.basename(file_path)
 
         if os.path.dirname(os.path.realpath(file_path)) == files_dir:
             self._AppendFile(file_name)
             return
 
-        new_path = os.path.join(files_dir, file_name)
-        i = 1
-        while os.path.exists(new_path):
-            i = i + 1
-            (body, ext) = os.path.splitext(new_path)
-            new_path = body + "(" + str(i) + ")" + ext
-
         try:
-            shutil.copy2(file_path, new_path)
+            renaming = self._source.SaveFiles((file_path,))
         except:
-            QMessageBox.critical(None, "Error", "Error while copying '" + file_name + "'.")
-            return
-
-        self._AppendFile(os.path.basename(new_path))
+            QMessageBox.critical(None, "Error", "Error while copying the file.")
+        else:
+            self._AppendFile(renaming.get(file_name, file_name))
 
     def _AppendFile(self, file_name):
         data = self._table.GetRow(self._id, ("files",))
@@ -398,19 +381,30 @@ class ItemWidget(QWidget):
         self._files.setPlainText(ItemWidget._FORMAT_FUNCTIONS["files"](data["files"]))
         self._updating = False
 
+    def SetLocalSource(self, source):
+        if self._source == source:
+            return
+
+        self._source = source
+        self._SetTable(source.table)
+
     def SetTable(self, database_table):
+        if self._table == database_table:
+            return
+
+        self._source = None
+        self._SetTable(database_table)
+
+    def _SetTable(self, database_table):
         if self._table is not None:
             self._table.Cleared.disconnect(self.Clear)
 
         self._table = database_table
         self._table.Cleared.connect(self.Clear)
 
-        file_ = database_table.database.file
-        if file_ == ":memory:":
-            self._database_dir = None
+        if self._source is None:
             self._files.setEnabled(False)
         else:
-            self._database_dir = os.path.dirname(os.path.realpath(file_))
             self._files.setEnabled(True)
 
     def Clear(self):
@@ -476,7 +470,7 @@ class ItemWidget(QWidget):
 
         self._reload.setEnabled(False)
         self._save.setEnabled(False)
-        if self._database_dir is not None:
+        if self._source is not None:
             self._file_add.setEnabled(True)
 
     @staticmethod
