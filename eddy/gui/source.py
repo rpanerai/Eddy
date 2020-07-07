@@ -206,9 +206,7 @@ class SourceModel(QStandardItemModel):
             return target.database.file != origin_file
 
         if isinstance(target, Tag):
-            # Accept drops only for tags in the origin database
-            origin_file = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))[0]
-            return target.source.database.file == origin_file
+            return True
 
         return False
 
@@ -220,8 +218,10 @@ class SourceModel(QStandardItemModel):
             return SourceModel._DropIntoSource(target, origin_file, records)
 
         if isinstance(target, Tag):
-            target.source.AssignToTag(ids, target.id)
-            return True
+            if target.source.database.file == origin_file:
+                target.source.AssignToTag(ids, target.id)
+                return True
+            return SourceModel._DropIntoSource(target.source, origin_file, records, target.id)
 
     def AddTag(self, item, view):
         data = item.data()
@@ -296,11 +296,15 @@ class SourceModel(QStandardItemModel):
             SourceModel._AppendTags(source, i)
 
     @staticmethod
-    def _DropIntoSource(target, origin_file, records):
+    def _DropIntoSource(target, origin_file, records, tag=None):
         # In copying items, we drop their citations and tags fields.
         for d in records:
             d.pop("citations")
             d.pop("tags")
+
+        if tag is not None:
+            for d in records:
+                d["tags"] = [tag]
 
         # If no files are involved in the drop action, simply add the items to the target database.
         if origin_file == ":memory:":
