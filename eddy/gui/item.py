@@ -9,7 +9,6 @@ from PySide2.QtWidgets import (
 )
 
 from eddy.icons import icons
-from paths import STORAGE_FOLDER
 
 
 class ItemWidget(QWidget):
@@ -492,21 +491,15 @@ class ItemWidget(QWidget):
     @staticmethod
     def _ParseDate(date_string):
         n_dashes = date_string.count("-")
-        if n_dashes == 0:
-            try:
+        try:
+            if n_dashes == 0:
                 return datetime.strptime(date_string, "%Y").strftime("%Y")
-            except:
-                return None
-        if n_dashes == 1:
-            try:
+            if n_dashes == 1:
                 return datetime.strptime(date_string, "%Y-%m").strftime("%Y-%m")
-            except:
-                return None
-        if n_dashes == 2:
-            try:
+            if n_dashes == 2:
                 return datetime.strptime(date_string, "%Y-%m-%d").strftime("%Y-%m-%d")
-            except:
-                return None
+        except:
+            pass
         return None
 
 

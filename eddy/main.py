@@ -1,5 +1,4 @@
 import sys
-from functools import partial
 
 from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QIcon
