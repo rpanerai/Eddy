@@ -12,7 +12,6 @@ from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu, 
 
 from eddy.icons import icons
 from eddy.gui.source import SearchRequest
-from paths import STORAGE_FOLDER
 
 
 class TableModel(QAbstractItemModel):
@@ -222,7 +221,7 @@ class TableModel(QAbstractItemModel):
         if dir_ is None:
             return []
 
-        return [os.path.join(dir_, STORAGE_FOLDER, f) for f in self.GetFiles(row)]
+        return [os.path.join(dir_, f) for f in self.GetFiles(row)]
 
     def FilterSelection(self, ids):
         return [i for i in ids if i in self._ids]
