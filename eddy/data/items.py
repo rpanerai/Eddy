@@ -37,7 +37,7 @@ class ItemsTable(Table):
     }
 
     _DEFAULTS = {
-        "type": None,
+        "type": "A",
         "date": None,
         "authors": [],
         "authors_bais": [],

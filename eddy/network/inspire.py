@@ -114,7 +114,7 @@ class InspirePlugin():
         data = entry["metadata"]
 
         if "document_type" in data:
-            item["type"] = InspirePlugin._TYPES.get(data["document_type"][0], None)
+            item["type"] = InspirePlugin._TYPES.get(data["document_type"][0], "A")
 
         item["date"] = data["earliest_date"]
 
