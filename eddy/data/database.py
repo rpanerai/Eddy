@@ -64,9 +64,15 @@ class Table(QObject):
             for d in data
         ]
         cursor = self._connection.cursor()
-        cursor.executemany(query, values)
+
+        # To get a valid lastrowid, we need to call execute() rather than executemany().
+        if len(values) == 1:
+            cursor.execute(query, values[0])
+        else:
+            cursor.executemany(query, values)
 
         self.Updated.emit()
+        return cursor.lastrowid
 
     def Delete(self, ids):
         query = "DELETE FROM " + self._name + " WHERE id = ?"

@@ -2,6 +2,7 @@ import os
 import webbrowser
 from functools import partial
 import json
+from datetime import datetime
 
 from PySide2.QtCore import (
     Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex, QMimeData,
@@ -229,6 +230,10 @@ class TableModel(QAbstractItemModel):
     def IndicesFromIds(self, ids):
         return [self.index(self._ids.index(i), 0) for i in ids]
 
+    def AddRow(self, data):
+        id_ = self._table.AddData([data])
+        return self.IndicesFromIds((id_,))[0]
+
     def DeleteRows(self, rows):
         ids = [self._ids[r] for r in rows]
         self._table.Delete(ids)
@@ -439,6 +444,8 @@ class TableView(QTreeView):
                 action_tags.setIcon(QIcon(icons.STOP))
                 action_tags.setText("Drop tags")
             menu.addSeparator()
+        action_new = menu.addAction(QIcon(icons.ADD), "New item")
+        menu.addSeparator()
         action_delete = menu.addAction(QIcon(icons.DELETE), "Remove")
 
         arxiv_id = self.model().GetArXivId(row)
@@ -476,9 +483,16 @@ class TableView(QTreeView):
             for u in doi_urls:
                 action_doi_link.triggered.connect(partial(self._OpenURL, u))
 
+        action_new.triggered.connect(self._AddRow)
+
         action_delete.triggered.connect(partial(self.model().DeleteRows, (row,)))
 
         return menu
+
+    def _AddRow(self):
+        data = {"date": datetime.today().strftime("%Y-%m-%d")}
+        index = self.model().AddRow(data)
+        self.setCurrentIndex(index)
 
     def _FilesMenu(self, row):
         file_paths = self.model().GetFilePaths(row)

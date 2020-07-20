@@ -9,6 +9,7 @@ INSPIRE = os.path.join(ICONS_FOLDER, "inspire.ico")
 
 BREEZE_FOLDER = os.path.join(ICONS_FOLDER, "breeze")
 
+ADD = os.path.join(BREEZE_FOLDER, "add.svg")
 DATABASE = os.path.join(BREEZE_FOLDER, "database.svg")
 DELETE = os.path.join(BREEZE_FOLDER, "delete.svg")
 FILE = os.path.join(BREEZE_FOLDER, "file.svg")
