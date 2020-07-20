@@ -223,7 +223,9 @@ class SourceModel(QStandardItemModel):
                 return True
             return SourceModel._DropIntoSource(target.source, origin_file, records, target.id)
 
-    def AddTag(self, item, view):
+        return False
+
+    def AddTag(self, item):
         data = item.data()
         if isinstance(data, LocalSource):
             source = data
@@ -234,14 +236,11 @@ class SourceModel(QStandardItemModel):
 
         tag = Tag(source, None, "", parent)
         tag_item = SourceModel._CreateItemFromData(tag)
-
         item.insertRow(0, tag_item)
         item.setChild(0, tag_item)
 
-        view.setExpanded(self.indexFromItem(item), True)
         self.TagBeingCreated = tag_item
-        # view.setCurrentIndex(self.indexFromItem(tag_item))
-        view.edit(self.indexFromItem(tag_item))
+        return tag_item
 
     def HandleNoUpdate(self):
         if self.TagBeingCreated is None:
@@ -478,7 +477,7 @@ class SourcePanel(QTreeView):
         path = os.path.dirname(item.data().database.file)
         action_open.triggered.connect(partial(self._OpenPath, path))
 
-        action_new_tag.triggered.connect(partial(self.model().AddTag, item, self))
+        action_new_tag.triggered.connect(partial(self._AddTag, item))
 
         return menu
 
@@ -488,10 +487,17 @@ class SourcePanel(QTreeView):
         action_new_tag = menu.addAction(QIcon(icons.TAG_NEW), "New tag")
         action_remove_tag = menu.addAction(QIcon(icons.DELETE), "Remove Tag")
 
-        action_new_tag.triggered.connect(partial(self.model().AddTag, item, self))
+        action_new_tag.triggered.connect(partial(self._AddTag, item))
         action_remove_tag.triggered.connect(partial(self.model().RemoveTag, item))
 
         return menu
+
+    def _AddTag(self, item):
+        tag_item = self.model().AddTag(item)
+
+        self.setExpanded(self.model().indexFromItem(item), True)
+        # self.setCurrentIndex(self.model().indexFromItem(tag_item))
+        self.edit(self.model().indexFromItem(tag_item))
 
     @staticmethod
     def _OpenPath(path):
