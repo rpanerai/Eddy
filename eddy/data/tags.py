@@ -47,3 +47,18 @@ class TagsTable(Table):
                     d[k] = self._DECODE_FUNCTIONS[k](d[k])
 
         return data
+
+    def ChildTags(self, parent):
+        query = (
+            "WITH RECURSIVE cte_" + self._name + " (id, parent) AS ( "
+            "SELECT t.id, t.parent FROM " + self._name + " t WHERE t.parent = ? "
+            "UNION ALL "
+            "SELECT t.id, t.parent FROM " + self._name + " t "
+            "JOIN cte_" + self._name + " c ON c.id = t.parent "
+            ") "
+            "SELECT id FROM cte_" + self._name
+        )
+        cursor = self._connection.cursor()
+        cursor.execute(query, (parent,))
+        children = [t for (t,) in cursor.fetchall()]
+        return children

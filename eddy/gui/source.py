@@ -117,6 +117,9 @@ class Tag:
     def Delete(self):
         self._DeleteIdAndChildren(self.id)
 
+    def ChildTagsIds(self):
+        return self.source.tags_table.ChildTags(self.id)
+
     def _DeleteIdAndChildren(self, id_):
         self.source.tags_table.Delete((id_,))
         self.source.DropTag(id_)
@@ -255,16 +258,6 @@ class SourceModel(QStandardItemModel):
 
         parent = self.indexFromItem(item.parent())
         self.removeRow(item.row(), parent)
-
-    @staticmethod
-    def ChildTagIds(item):
-        ids = []
-        i = 0
-        while (c := item.child(i)) is not None:
-            ids.append(c.data().id)
-            ids = ids + SourceModel.ChildTagIds(c)
-            i = i + 1
-        return ids
 
     @staticmethod
     def _CreateItemFromData(data):
@@ -417,7 +410,7 @@ class SourcePanel(QTreeView):
         tag_ids = []
         if isinstance(data, Tag):
             source = data.source
-            tag_ids = [data.id] + self.model().ChildTagIds(item)
+            tag_ids = [data.id] + data.ChildTagsIds()
         else:
             source = data
 
