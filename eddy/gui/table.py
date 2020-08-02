@@ -196,6 +196,11 @@ class TableModel(QAbstractItemModel):
     def IsVisible(self, id_):
         return id_ in self._model_map
 
+    def ActiveTag(self):
+        if self._tags == []:
+            return None
+        return self._tags[0]
+
     def GetId(self, row):
         return self._ids[row]
 
@@ -392,20 +397,24 @@ class TableView(QTreeView):
         menu.exec_(self.mapToGlobal(position))
 
     def _HandleRightClickOnItem(self, position):
-        # index = self.indexAt(position)
-        # if not index.isValid():
-        #     return
-        # row = index.row()
+        index = self.indexAt(position)
+        if not index.isValid():
+            if self.model().source is None:
+                return
+            self.selectionModel().clearSelection()
 
         rows = [r.row() for r in self.selectionModel().selectedRows()]
-        if rows == []:
-            return
 
         menu = self._ContextMenu(rows)
         menu.exec_(self.viewport().mapToGlobal(position))
 
     def _ContextMenu(self, rows):
         menu = QMenu()
+
+        if len(rows) == 0:
+            action_new = menu.addAction(QIcon(icons.ADD), "New item")
+            action_new.triggered.connect(self._AddRow)
+            return menu
 
         if len(rows) > 1:
             action_delete = menu.addAction(
@@ -444,8 +453,9 @@ class TableView(QTreeView):
                 action_tags.setIcon(QIcon(icons.STOP))
                 action_tags.setText("Drop tags")
             menu.addSeparator()
-        action_new = menu.addAction(QIcon(icons.ADD), "New item")
-        menu.addSeparator()
+            action_new = menu.addAction(QIcon(icons.ADD), "New item")
+            action_new.triggered.connect(self._AddRow)
+            menu.addSeparator()
         action_delete = menu.addAction(QIcon(icons.DELETE), "Remove")
 
         arxiv_id = self.model().GetArXivId(row)
@@ -483,14 +493,14 @@ class TableView(QTreeView):
             for u in doi_urls:
                 action_doi_link.triggered.connect(partial(self._OpenURL, u))
 
-        action_new.triggered.connect(self._AddRow)
-
         action_delete.triggered.connect(partial(self.model().DeleteRows, (row,)))
 
         return menu
 
     def _AddRow(self):
         data = {"date": datetime.today().strftime("%Y-%m-%d")}
+        if (tag := self.model().ActiveTag()) is not None:
+            data["tags"] = [tag]
         index = self.model().AddRow(data)
         self.setCurrentIndex(index)
 
