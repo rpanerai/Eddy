@@ -2,7 +2,7 @@ from datetime import datetime
 import os
 
 from PySide2.QtCore import Signal
-from PySide2.QtGui import QFont, QIcon
+from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QGroupBox, QFormLayout, QScrollArea, QLineEdit, QTextEdit,
     QToolButton, QComboBox, QFileDialog, QMessageBox
@@ -107,7 +107,10 @@ class ItemWidget(QWidget):
         min_height = self._date.sizeHint().height()
 
         self._title = AdaptiveTextEdit(min_height)
-        self._title.setFontWeight(QFont.Bold)
+        bold_font = self._title.document().defaultFont()
+        bold_font.setBold(True)
+        self._title.document().setDefaultFont(bold_font)
+
         self._authors = AdaptiveTextEdit(min_height)
         self._editors = AdaptiveTextEdit(min_height)
         self._abstract = AdaptiveTextEdit(min_height)
