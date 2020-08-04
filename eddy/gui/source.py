@@ -14,9 +14,9 @@ from paths import STORAGE_FOLDER, LOCAL_DATABASES
 from eddy.icons import icons
 from eddy.network.inspire import InspirePlugin
 from eddy.network.arxiv import ArXivPlugin
-from eddy.data.database import Database
-from eddy.data.items import ItemsTable
-from eddy.data.tags import TagsTable
+from eddy.database.database import Database
+from eddy.database.items import ItemsTable
+from eddy.database.tags import TagsTable
 
 
 class WebSource:

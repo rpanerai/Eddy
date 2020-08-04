@@ -1,6 +1,6 @@
 import json
 
-from eddy.data.database import Table
+from eddy.database.database import Table
 
 
 class ItemsTable(Table):

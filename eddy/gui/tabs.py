@@ -6,8 +6,8 @@ from PySide2.QtWidgets import (
 )
 
 from eddy.network.fetcher import Fetcher
-from eddy.data.database import Database
-from eddy.data.items import ItemsTable
+from eddy.database.database import Database
+from eddy.database.items import ItemsTable
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemWidget
 from eddy.gui.searchfilter import SearchBar, FilterBar
