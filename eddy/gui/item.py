@@ -38,6 +38,7 @@ class ItemWidget(QWidget):
         "inspire_id",
         "arxiv_id",
         "dois",
+        "urls",
         "files"
     )
 
@@ -61,6 +62,7 @@ class ItemWidget(QWidget):
         "inspire_id": lambda x: str(x) if x is not None else None,
         "year": lambda x: str(x) if x is not None else None,
         "dois": "\n".join,
+        "urls": "\n".join,
         "files": "\n".join
     }
 
@@ -116,6 +118,7 @@ class ItemWidget(QWidget):
         self._abstract = AdaptiveTextEdit(min_height)
         self._isbns = AdaptiveTextEdit(min_height)
         self._dois = AdaptiveTextEdit(min_height)
+        self._urls = AdaptiveTextEdit(min_height)
         self._files = AdaptiveTextEdit(min_height)
 
         self._scroll_widget = QWidget()
@@ -171,6 +174,7 @@ class ItemWidget(QWidget):
         form_layout.addRow("INSPIRE", self._inspire_id)
         form_layout.addRow("arXiv", self._arxiv_id)
         form_layout.addRow("DOIs", self._dois)
+        form_layout.addRow("URLs", self._urls)
         form_layout.addRow("Files", self._files)
         form_layout.setVerticalSpacing(0)
         form = QWidget()
@@ -218,6 +222,7 @@ class ItemWidget(QWidget):
         self._abstract.textChanged.connect(self._EnableRefreshSave)
         self._isbns.textChanged.connect(self._EnableRefreshSave)
         self._dois.textChanged.connect(self._EnableRefreshSave)
+        self._urls.textChanged.connect(self._EnableRefreshSave)
         self._files.textChanged.connect(self._EnableRefreshSave)
 
     # def _RefreshTypeFields(self, index):
@@ -338,6 +343,12 @@ class ItemWidget(QWidget):
             d for d in
             [d.strip() for d in self._dois.toPlainText().splitlines()]
             if d != ""
+        ]
+
+        data["urls"] = [
+            u for u in
+            [u.strip() for u in self._urls.toPlainText().splitlines()]
+            if u != ""
         ]
 
         data["files"] = [
@@ -464,6 +475,7 @@ class ItemWidget(QWidget):
         self._inspire_id.setText(record["inspire_id"])
         self._arxiv_id.setText(record["arxiv_id"])
         self._dois.setPlainText(record["dois"])
+        self._urls.setPlainText(record["urls"])
         self._files.setPlainText(record["files"])
         self._updating = False
 
