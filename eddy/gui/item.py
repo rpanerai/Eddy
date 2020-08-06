@@ -446,9 +446,9 @@ class ItemWidget(QWidget):
         editors = []
         for (e, b) in zip(record["editors"], record["editors_bais"]):
             if b is None:
-                authors.append(e)
+                editors.append(e)
             else:
-                authors.append(e + " (" + b + ")")
+                editors.append(e + " (" + b + ")")
         record["editors"] = editors
         for (k, v) in ItemWidget._FORMAT_FUNCTIONS.items():
             record[k] = v(record[k])
