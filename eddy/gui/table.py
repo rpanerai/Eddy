@@ -12,7 +12,7 @@ from PySide2.QtGui import QIcon, QDrag, QDesktopServices
 from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel
 
 from eddy.icons import icons
-from eddy.gui.source import SearchRequest
+from eddy.core.web import SearchRequest
 
 
 class TableModel(QAbstractItemModel):

@@ -4,7 +4,7 @@ from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication, QMainWindow, QAction, QStyle
 
-from eddy.gui.tabs import TabSystem
+from eddy.gui.tab import TabSystem
 from eddy.icons import icons
 
 
