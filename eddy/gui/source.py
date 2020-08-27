@@ -57,7 +57,7 @@ class SourceModel(QStandardItemModel):
             i = SourceModel._CreateItemFromData(s)
             local.setChild(r, i)
             SourceModel._AppendTags(s, i)
-            # i.sortChildren(0, Qt.AscendingOrder)
+            i.sortChildren(0, Qt.AscendingOrder)
 
     def mimeTypes(self):
         return ["application/x-eddy"]
