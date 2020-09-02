@@ -384,9 +384,8 @@ class ItemWidget(QWidget):
     def _AppendFile(self, file_name):
         data = self._table.GetRow(self._id, ("files",))
         data["files"].append(file_name)
-        self._table.EditRow(self._id, data)
-
         self._updating = True
+        self._table.EditRow(self._id, data)
         self._files.setPlainText(ItemWidget._FORMAT_FUNCTIONS["files"](data["files"]))
         self._updating = False
 
@@ -421,6 +420,9 @@ class ItemWidget(QWidget):
         self._scroll.verticalScrollBar().hide()
 
     def DisplayItem(self, id_=False):
+        if self._updating:
+            return
+
         if id_:
             self._id = id_
 
