@@ -374,10 +374,6 @@ class ItemWidget(QWidget):
             return
         file_name = os.path.basename(file_path)
 
-        if os.path.dirname(os.path.realpath(file_path)) == files_dir:
-            self._AppendFile(file_name)
-            return
-
         try:
             renaming = self._source.SaveFiles((file_path,))
         except:

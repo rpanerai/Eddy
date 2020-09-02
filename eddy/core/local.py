@@ -17,31 +17,27 @@ class LocalSource:
     def FilesDir(self):
         dir_ = os.path.join(os.path.dirname(os.path.realpath(self.database.file)), STORAGE_FOLDER)
         if not os.path.isdir(dir_):
-            try:
-                os.mkdir(dir_)
-            except:
-                return None
+            os.mkdir(dir_)
         return dir_
 
     def SaveFiles(self, paths):
+        paths = set(map(os.path.realpath, paths))
         files_dir = self.FilesDir()
 
-        copies = []
         renamings = {}
         for path in paths:
             file_ = os.path.basename(path)
             new_path = os.path.join(files_dir, file_)
+            if path == new_path:
+                continue
             i = 1
             while os.path.exists(new_path):
                 i = i + 1
                 (body, ext) = os.path.splitext(new_path)
                 new_path = body + "(" + str(i) + ")" + ext
-            copies.append((path, new_path))
+            shutil.copy2(path, new_path)
             if i > 1:
                 renamings[file_] = os.path.basename(new_path)
-
-        for c in copies:
-            shutil.copy2(*c)
 
         return renamings
 

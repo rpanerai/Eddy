@@ -1,4 +1,5 @@
 from functools import partial
+import itertools
 import json
 import os
 
@@ -156,7 +157,6 @@ class SourceModel(QStandardItemModel):
 
     @staticmethod
     def _DropIntoSource(target, origin_file, records, tag=None):
-        # In copying items, we drop their citations and tags fields.
         for d in records:
             d.pop("citations")
             d.pop("tags")
@@ -165,34 +165,16 @@ class SourceModel(QStandardItemModel):
             for d in records:
                 d["tags"] = [tag]
 
-        # If no files are involved in the drop action, simply add the items to the target database.
         if origin_file == ":memory:":
             target.table.AddData(records)
             return True
 
-        files = []
-        for d in records:
-            files = files + d["files"]
-        files = set(files)
+        files = set(itertools.chain(*[d["files"] for d in records]))
         if len(files) == 0:
             target.table.AddData(records)
             return True
 
-        # If the Files folder is shared between origin and target, there is no need to copy files.
         origin_dir = os.path.join(os.path.dirname(os.path.realpath(origin_file)), STORAGE_FOLDER)
-        target_dir = target.FilesDir()
-        if target_dir == origin_dir:
-            target.table.AddData(records)
-            return True
-
-        # Check that the Files folder is accessible.
-        if target_dir is None:
-            QMessageBox.critical(
-                None, "Error", "Cannot access storage folder. Drop action aborted."
-            )
-            return False
-
-        # Copy files in the target folder and add the items to the target database.
         paths = [os.path.join(origin_dir, f) for f in files]
         try:
             renamings = target.SaveFiles(paths)
