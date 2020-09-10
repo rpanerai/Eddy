@@ -170,7 +170,7 @@ class TableModel(QAbstractItemModel):
         data = self._table.GetTable(TableModel._KEYS + ("editors",))
         self._model = [[
             d["date"],
-            TableModel._FormatAuthors(d["authors"]) + TableModel._FormatAuthors(d["editors"]),
+            TableModel._FormatAuthors(d["authors"] + d["editors"]),
             d["title"],
             d["citations"]
         ] for d in data]
