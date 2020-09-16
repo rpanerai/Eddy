@@ -1,7 +1,9 @@
 import os
 import shutil
+import itertools
 
 from paths import STORAGE_FOLDER
+from eddy.core.tag import Tag
 from eddy.database.database import Database
 from eddy.database.items import ItemsTable
 from eddy.database.tags import TagsTable
@@ -10,12 +12,12 @@ from eddy.database.tags import TagsTable
 class LocalSource:
     def __init__(self, name, file):
         self.name = name
-        self.database = Database(file)
+        self.database = Database(os.path.realpath(file))
         self.table = ItemsTable(self.database)
         self.tags_table = TagsTable(self.database)
 
     def FilesDir(self):
-        dir_ = os.path.join(os.path.dirname(os.path.realpath(self.database.file)), STORAGE_FOLDER)
+        dir_ = os.path.join(os.path.dirname(self.database.file), STORAGE_FOLDER)
         if not os.path.isdir(dir_):
             os.mkdir(dir_)
         return dir_
@@ -66,3 +68,21 @@ class LocalSource:
     def TagMap(self):
         tags = self.tags_table.GetTable()
         return {t["id"]: t["name"] for t in tags}
+
+    def CheckFiles(self):
+        (_, _, files_present) = next(os.walk(self.FilesDir()))
+        files_present = set(files_present)
+
+        records = self.table.GetTable(("files",))
+        files_needed = set(itertools.chain(*[d["files"] for d in records]))
+
+        orphans = files_present - files_needed
+        missing = files_needed - files_present
+
+        dir_ = os.path.dirname(self.database.file)
+        with open(os.path.join(dir_, self.name + "_orphans.txt"), "w") as f:
+            for s in orphans:
+                f.write(f"{s}\n")
+        with open(os.path.join(dir_, self.name + "_missing.txt"), "w") as f:
+            for s in missing:
+                f.write(f"{s}\n")

@@ -313,13 +313,18 @@ class SourcePanel(QTreeView):
     def _ContextMenuLocalSource(self, item):
         menu = QMenu()
 
-        action_open = menu.addAction(QIcon(icons.OPEN), "Open folder")
         action_new_tag = menu.addAction(QIcon(icons.TAG_NEW), "New tag")
+        menu.addSeparator()
+        action_open = menu.addAction(QIcon(icons.OPEN), "Open folder")
+        action_check_files = menu.addAction(
+            QIcon(icons.FILE_CHECK), "Find missing and orphan files…")
 
         path = os.path.dirname(item.data().database.file)
         action_open.triggered.connect(partial(self._OpenPath, path))
 
         action_new_tag.triggered.connect(partial(self._AddTag, item))
+
+        action_check_files.triggered.connect(item.data().CheckFiles)
 
         return menu
 
