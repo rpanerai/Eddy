@@ -6,10 +6,12 @@ from datetime import datetime
 
 from PySide2.QtCore import (
     Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex, QMimeData,
-    QByteArray, QUrl
+    QByteArray, QUrl, QFileInfo
 )
 from PySide2.QtGui import QIcon, QDrag, QDesktopServices
-from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel
+from PySide2.QtWidgets import (
+    QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel, QFileIconProvider
+)
 
 from eddy.icons import icons
 from eddy.core.web import SearchRequest
@@ -513,7 +515,7 @@ class TableView(QTreeView):
 
         menu = QMenu()
         for (f, p) in zip(files, file_paths):
-            a = menu.addAction(QIcon(icons.FILE), f)
+            a = menu.addAction(QFileIconProvider().icon(QFileInfo(f)), f)
             a.triggered.connect(partial(self._OpenLocalDocument, p))
         return menu
 
