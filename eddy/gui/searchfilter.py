@@ -44,6 +44,9 @@ class SearchBar(QWidget):
     def SetQueryEditEnabled(self, bool_):
         self._query_edit.setEnabled(bool_)
 
+    def SetQuery(self, query):
+        self._query_edit.setText(query)
+
     def LaunchQuery(self, query):
         self._query_edit.setText(query)
         self._HandleReturnPressed()

@@ -27,6 +27,8 @@ class TabContent(QWidget):
         # self._database_table = ItemsTable(Database("./test.db"), "items", drop_on_del=False)
         self._database_table.Clear()
 
+        self._last_search = None
+
         self._fetcher = Fetcher()
         self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
         self._fetcher.BatchProgress.connect(self._HandleFetchingProgress)
@@ -119,10 +121,15 @@ class TabContent(QWidget):
             return
 
         self._web_source_active = True
-        self.TitleRequested[()].emit()
         self._search_bar.SetQueryEditEnabled(True)
         self._filter_bar.clear()
-        self._database_table.Clear()
+
+        if self._last_search is None:
+            self.TitleRequested[()].emit()
+        else:
+            self._search_bar.SetQuery(self._last_search.query)
+            self.TitleRequested.emit(self._last_search.icon, self._last_search.query)
+
         self._table_view.SetShowCitations(True)
         self._table_model.SetTable(self._database_table)
         self._item_widget.SetTable(self._database_table)
@@ -144,6 +151,7 @@ class TabContent(QWidget):
     def _HandleSearchRequested(self, search):
         self._database_table.Clear()
         self._filter_bar.clear()
+        self._last_search = search
         self.TitleRequested.emit(search.icon, search.query)
         self._fetcher.Fetch(search.plugin, search.query, 50)
 

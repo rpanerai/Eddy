@@ -143,6 +143,7 @@ class ItemWidget(QWidget):
         layout.addWidget(self._scroll)
         layout.addWidget(self._tool_widget)
         self.setLayout(layout)
+        self.Clear()
 
     def _SetupScrollUI(self):
         self._details_layout.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
