@@ -5,7 +5,7 @@ from PySide2.QtCore import QObject, Signal
 
 class Database(QObject):
     def __init__(self, file=":memory:", parent=None):
-        super(Database, self).__init__(parent)
+        super().__init__(parent)
 
         self.file = file
         self.connection = sqlite3.connect(self.file, isolation_level=None)
@@ -28,7 +28,7 @@ class Table(QObject):
     _DECODE_FUNCTIONS = {}
 
     def __init__(self, database, name, drop_on_del=False, parent=None):
-        super(Table, self).__init__(parent)
+        super().__init__(parent)
 
         self.database = database
         self._connection = database.connection

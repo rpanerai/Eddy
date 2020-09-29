@@ -21,7 +21,7 @@ class TabContent(QWidget):
     TitleRequested = Signal((str, str), ())
 
     def __init__(self, index, source_model, memory_database, parent=None):
-        super(TabContent, self).__init__(parent)
+        super().__init__(parent)
 
         self._database_table = ItemsTable(memory_database, "tab" + str(index), drop_on_del=True)
         # self._database_table = ItemsTable(Database("./test.db"), "items", drop_on_del=False)
@@ -189,7 +189,7 @@ class TabSystem(QTabWidget):
     _DEFAULT_TEXT = "New Tab"
 
     def __init__(self, parent=None):
-        super(TabSystem, self).__init__(parent)
+        super().__init__(parent)
 
         self.setElideMode(Qt.ElideRight)
 

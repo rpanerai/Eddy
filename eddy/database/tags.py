@@ -18,7 +18,7 @@ class TagsTable(Table):
     _DECODE_FUNCTIONS = {}
 
     def __init__(self, database, name="tags", drop_on_del=False, parent=None):
-        super(TagsTable, self).__init__(database, name, drop_on_del, parent)
+        super().__init__(database, name, drop_on_del, parent)
 
     def AddTag(self, name, parent=0):
         query = "INSERT INTO " + self._name + " (name, parent) VALUES (?,?)"
@@ -30,7 +30,7 @@ class TagsTable(Table):
 
     def GetTable(self, parent=None):
         if parent is None:
-            return super(TagsTable, self).GetTable(keys=None)
+            return super().GetTable(keys=None)
 
         keys = ["id", "name"]
         query = ("SELECT " + ", ".join(keys) + " FROM " + self._name

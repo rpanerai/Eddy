@@ -31,7 +31,7 @@ class SourceModel(QStandardItemModel):
     TAG_BUILDER_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsEditable
 
     def __init__(self, parent=None):
-        super(SourceModel, self).__init__(parent)
+        super().__init__(parent)
 
         root = self.invisibleRootItem()
         self.TagBeingCreated = None
@@ -195,7 +195,7 @@ class SourcePanel(QTreeView):
     # SourceSelected = Signal((WebSource,), (LocalSource,))
 
     def __init__(self, parent=None):
-        super(SourcePanel, self).__init__(parent)
+        super().__init__(parent)
 
         self._delegate = SourceDelegate()
         self.setItemDelegate(self._delegate)
@@ -215,7 +215,7 @@ class SourcePanel(QTreeView):
         if self.model() is not None:
             self._delegate.EditorNoUpdate.disconnect(self.model().HandleNoUpdate)
 
-        super(SourcePanel, self).setModel(model)
+        super().setModel(model)
 
         self._delegate.EditorNoUpdate.connect(self.model().HandleNoUpdate)
 
@@ -228,10 +228,10 @@ class SourcePanel(QTreeView):
     #         if index.isValid():
     #             self.selectionModel().setCurrentIndex(index, QItemSelectionModel.Current)
     #     else:
-    #         super(SourcePanel, self).mousePressEvent(event)
+    #         super().mousePressEvent(event)
 
     def selectionCommand(self, index, event):
-        # selection_flags = super(SourcePanel, self).selectionCommand(index, event)
+        # selection_flags = super().selectionCommand(index, event)
 
         # NOTE: selectionCommand returns QItemSelectionModel.SelectionFlag
         # Then enum value corresponding to the flag can be accessed with int().
@@ -248,7 +248,7 @@ class SourcePanel(QTreeView):
         return QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
 
     def selectionChanged(self, selected, deselected):
-        super(SourcePanel, self).selectionChanged(selected, deselected)
+        super().selectionChanged(selected, deselected)
 
         rows = self.selectionModel().selectedRows()
         if rows == []:
@@ -354,7 +354,7 @@ class SourceDelegate(QStyledItemDelegate):
     EditorNoUpdate = Signal()
 
     def __init__(self, parent=None):
-        super(SourceDelegate, self).__init__(parent)
+        super().__init__(parent)
         self.closeEditor.connect(self.HandleCloseEditor)
 
     def setModelData(self, editor, model, index):
@@ -367,7 +367,7 @@ class SourceDelegate(QStyledItemDelegate):
             # Possibly, display an error message.
             return
 
-        super(SourceDelegate, self).setModelData(editor, model, index)
+        super().setModelData(editor, model, index)
         SourceDelegate.RenameTag(model, item)
         item.parent().sortChildren(0, Qt.AscendingOrder)
 

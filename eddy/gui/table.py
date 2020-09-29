@@ -40,7 +40,7 @@ class TableModel(QAbstractItemModel):
     }
 
     def __init__(self, parent=None):
-        super(TableModel, self).__init__(parent)
+        super().__init__(parent)
 
         self.source = None
         self._table = None
@@ -91,7 +91,7 @@ class TableModel(QAbstractItemModel):
         if not index.isValid():
             return 0
 
-        return Qt.ItemIsDragEnabled | super(TableModel, self).flags(index)
+        return Qt.ItemIsDragEnabled | super().flags(index)
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Orientation.Horizontal:
@@ -266,7 +266,7 @@ class TableView(QTreeView):
     NewTabRequested = Signal(dict)
 
     def __init__(self, parent=None):
-        super(TableView, self).__init__(parent)
+        super().__init__(parent)
 
         self.setItemsExpandable(False)
         self.setUniformRowHeights(True)
@@ -303,7 +303,7 @@ class TableView(QTreeView):
             model.modelReset.disconnect(self._RestoreSelection)
             model.layoutChanged.disconnect(self._RestoreSelection)
 
-        super(TableView, self).setModel(model)
+        super().setModel(model)
 
         model.modelAboutToBeReset.connect(self._SaveSelection)
         model.layoutAboutToBeChanged.connect(self._SaveSelection)
@@ -314,12 +314,12 @@ class TableView(QTreeView):
         self._ResizeColumnsAtGeometryChange()
 
     def reset(self):
-        super(TableView, self).reset()
+        super().reset()
 
         self._SetColumnVisibility()
 
     def selectionChanged(self, selected, deselected):
-        super(TableView, self).selectionChanged(selected, deselected)
+        super().selectionChanged(selected, deselected)
 
         rows = [r.row() for r in self.selectionModel().selectedRows()]
         if len(rows) == 1:

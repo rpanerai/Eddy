@@ -92,7 +92,7 @@ class ItemsTable(Table):
     }
 
     def __init__(self, database, name="items", drop_on_del=False, parent=None):
-        super(ItemsTable, self).__init__(database, name, drop_on_del, parent)
+        super().__init__(database, name, drop_on_del, parent)
 
     def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=(), tags=()):
         keys = list({k for k in keys if k in self._KEYS.keys()})

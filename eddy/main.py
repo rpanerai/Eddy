@@ -10,7 +10,7 @@ from eddy.icons import icons
 
 class MainWindow(QMainWindow):
     def __init__(self, application, parent=None):
-        super(MainWindow, self).__init__(parent)
+        super().__init__(parent)
 
         self.setWindowTitle("Eddy")
 

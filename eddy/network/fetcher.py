@@ -18,7 +18,7 @@ class Fetcher(QObject):
     FetchingError = Signal(str)
 
     def __init__(self, parent=None):
-        super(Fetcher, self).__init__(parent)
+        super().__init__(parent)
 
         self._manager = NETWORK_MANAGER
 

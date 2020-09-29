@@ -67,7 +67,7 @@ class ItemWidget(QWidget):
     }
 
     def __init__(self, parent=None):
-        super(ItemWidget, self).__init__(parent)
+        super().__init__(parent)
 
         self._source = None
         self._table = None
@@ -520,7 +520,7 @@ class ItemWidget(QWidget):
 class AdaptiveTextEdit(QTextEdit):
     def __init__(self, min_height, parent=None):
         # One might want to add a mechanism for setting a max_height.
-        super(AdaptiveTextEdit, self).__init__(parent)
+        super().__init__(parent)
         self.min_height = min_height
         self.setAcceptRichText(False)
         self.setTabChangesFocus(True)
@@ -531,7 +531,7 @@ class AdaptiveTextEdit(QTextEdit):
         cursor.clearSelection()
         self.setTextCursor(cursor)
 
-        super(AdaptiveTextEdit, self).focusOutEvent(event)
+        super().focusOutEvent(event)
 
     def Resize(self, new_size):
         margins = self.contentsMargins()

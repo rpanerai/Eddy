@@ -11,7 +11,7 @@ class SearchBar(QWidget):
     StopPressed = Signal()
 
     def __init__(self, parent=None):
-        super(SearchBar, self).__init__(parent)
+        super().__init__(parent)
 
         self._query_edit = QLineEdit()
         self._query_edit.setClearButtonEnabled(True)
@@ -64,7 +64,7 @@ class FilterBar(QLineEdit):
     TextChanged = Signal(list)
 
     def __init__(self, parent=None):
-        super(FilterBar, self).__init__(parent)
+        super().__init__(parent)
 
         self.setClearButtonEnabled(True)
         self.setPlaceholderText("Filter authors and titles")
