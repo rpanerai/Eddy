@@ -1,7 +1,43 @@
-class Tag:
-    def __init__(self, source, id_, name, parent):
+from abc import ABC, abstractmethod
+
+
+class TagBuilder:
+    def __init__(self, source, parent):
+        self.source = source
+        self.parent = parent
+
+    def Build(self, name):
+        id_ = self.source.tags_table.AddTag(name, self.parent)
+        return Tag(self.source, id_, name, self.parent)
+
+
+class AbstractTag(ABC):
+    @abstractmethod
+    def __init__(self, source, id_):
         self.source = source
         self.id = id_
+
+    def ListChildren(self):
+        return [
+            Tag(self.source, t["id"], t["name"], self.id)
+            for t in self.source.tags_table.GetTable(self.id)
+        ]
+
+    def ChildTagBuilder(self):
+        return TagBuilder(self.source, self.id)
+
+    def ChildTagsIds(self):
+        return self.source.tags_table.ChildTags(self.id)
+
+
+class RootTag(AbstractTag):
+    def __init__(self, source):
+        super().__init__(source, 0)
+
+
+class Tag(AbstractTag):
+    def __init__(self, source, id_, name, parent):
+        super().__init__(source, id_)
         self.name = name
         self.parent = parent
 
@@ -10,25 +46,4 @@ class Tag:
         self.name = name
 
     def Delete(self):
-        self._DeleteIdAndChildren(self.id)
-
-    def ChildTagsIds(self):
-        return self.source.tags_table.ChildTags(self.id)
-
-    def _DeleteIdAndChildren(self, id_):
-        self.source.tags_table.Delete((id_,))
-        self.source.DropTag(id_)
-        for t in self.source.tags_table.GetTable(id_):
-            self._DeleteIdAndChildren(t["id"])
-
-    @classmethod
-    def CreateFromSource(cls, source, name, parent):
-        id_ = source.tags_table.AddTag(name, parent)
-        return cls(source, id_, name, parent)
-
-    @classmethod
-    def ListFromParent(cls, source, parent):
-        return [
-            cls(source, t["id"], t["name"], parent)
-            for t in source.tags_table.GetTable(parent)
-        ]
+        self.source.DeleteTagAndChildren(self.id)

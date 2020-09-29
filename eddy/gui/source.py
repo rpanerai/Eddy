@@ -15,7 +15,7 @@ from eddy.network.inspire import InspirePlugin
 from eddy.network.arxiv import ArXivPlugin
 from eddy.core.web import WebSource
 from eddy.core.local import LocalSource
-from eddy.core.tag import Tag
+from eddy.core.tag import Tag, TagBuilder
 
 
 class SourceModel(QStandardItemModel):
@@ -28,6 +28,7 @@ class SourceModel(QStandardItemModel):
     WEB_SOURCE_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable
     LOCAL_SOURCE_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
     TAG_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable | Qt.ItemIsDropEnabled
+    TAG_BUILDER_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsEditable
 
     def __init__(self, parent=None):
         super(SourceModel, self).__init__(parent)
@@ -57,7 +58,7 @@ class SourceModel(QStandardItemModel):
             s = LocalSource(n, p)
             i = SourceModel._CreateItemFromData(s)
             local.setChild(r, i)
-            SourceModel._AppendTags(s, i)
+            SourceModel._AppendTags(i)
             i.sortChildren(0, Qt.AscendingOrder)
 
     def mimeTypes(self):
@@ -99,14 +100,10 @@ class SourceModel(QStandardItemModel):
     def AddTag(self, item):
         data = item.data()
         if isinstance(data, LocalSource):
-            source = data
-            parent = 0
-        else:
-            source = data.source
-            parent = data.id
+            data = data.RootTag()
 
-        tag = Tag(source, None, "", parent)
-        tag_item = SourceModel._CreateItemFromData(tag)
+        tag_builder = data.ChildTagBuilder()
+        tag_item = SourceModel._CreateItemFromData(tag_builder)
         item.insertRow(0, tag_item)
         item.setChild(0, tag_item)
 
@@ -116,13 +113,15 @@ class SourceModel(QStandardItemModel):
     def HandleNoUpdate(self):
         if self.TagBeingCreated is None:
             return
-        self.RemoveTag(self.TagBeingCreated)
+
+        item = self.TagBeingCreated
+        parent = self.indexFromItem(item.parent())
+        self.removeRow(item.row(), parent)
+
         self.TagBeingCreated = None
 
     def RemoveTag(self, item):
-        tag = item.data()
-        if tag.id is not None:
-            tag.Delete()
+        item.data().Delete()
 
         parent = self.indexFromItem(item.parent())
         self.removeRow(item.row(), parent)
@@ -138,22 +137,23 @@ class SourceModel(QStandardItemModel):
         elif isinstance(data, Tag):
             item = QStandardItem(QIcon(icons.TAG), data.name)
             item.setFlags(SourceModel.TAG_FLAGS)
+        elif isinstance(data, TagBuilder):
+            item = QStandardItem(QIcon(icons.TAG), "")
+            item.setFlags(SourceModel.TAG_BUILDER_FLAGS)
 
         item.setData(data)
         return item
 
     @staticmethod
-    def _AppendTags(source, item):
+    def _AppendTags(item):
         data = item.data()
         if isinstance(data, LocalSource):
-            parent = 0
-        else:
-            parent = data.id
+            data = data.RootTag()
 
-        for (r, t) in enumerate(Tag.ListFromParent(source, parent)):
+        for (j, t) in enumerate(data.ListChildren()):
             i = SourceModel._CreateItemFromData(t)
-            item.setChild(r, i)
-            SourceModel._AppendTags(source, i)
+            item.setChild(j, i)
+            SourceModel._AppendTags(i)
 
     @staticmethod
     def _DropIntoSource(target, origin_file, records, tag=None):
@@ -343,7 +343,6 @@ class SourcePanel(QTreeView):
         tag_item = self.model().AddTag(item)
 
         self.setExpanded(self.model().indexFromItem(item), True)
-        # self.setCurrentIndex(self.model().indexFromItem(tag_item))
         self.edit(self.model().indexFromItem(tag_item))
 
     @staticmethod
@@ -387,5 +386,5 @@ class SourceDelegate(QStyledItemDelegate):
         if model.TagBeingCreated is None:
             tag.Rename(name)
         else:
-            item.setData(Tag.CreateFromSource(tag.source, name, tag.parent))
+            item.setData(tag.Build(name))
             model.TagBeingCreated = None

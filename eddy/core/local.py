@@ -3,7 +3,7 @@ import shutil
 import itertools
 
 from paths import STORAGE_FOLDER
-from eddy.core.tag import Tag
+from eddy.core.tag import Tag, RootTag
 from eddy.database.database import Database
 from eddy.database.items import ItemsTable
 from eddy.database.tags import TagsTable
@@ -55,11 +55,24 @@ class LocalSource:
         record["tags"].remove(tag_id)
         self.table.EditRow(id_, record)
 
+    def RootTag(self):
+        return RootTag(self)
+
+    def AddTag(self, name, parent):
+        id_ = self.tags_table.AddTag(name, parent)
+        return Tag(self, id_, name, parent)
+
     def DropTag(self, tag_id):
         items = self.table.GetTable(("id", "tags"), tags=(tag_id,))
         for i in items:
             i["tags"].remove(tag_id)
             self.table.EditRow(i["id"], {"tags": i["tags"]})
+
+    def DeleteTagAndChildren(self, id_):
+        self.tags_table.Delete((id_,))
+        self.DropTag(id_)
+        for t in self.tags_table.GetTable(id_):
+            self.DeleteTagAndChildren(t["id"])
 
     def TagNames(self):
         tags = self.tags_table.GetTable()
