@@ -8,4 +8,4 @@ Eddy is in a very early stage of development. So far its functionality is limite
 
 ## License
 
-This project is licensed under the GPLv2 License.
+This project is licensed under the GNU General Public License v2.0.
