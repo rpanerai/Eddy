@@ -387,4 +387,5 @@ class SourceDelegate(QStyledItemDelegate):
             tag.Rename(name)
         else:
             item.setData(tag.Build(name))
+            item.setFlags(SourceModel.TAG_FLAGS)
             model.TagBeingCreated = None
