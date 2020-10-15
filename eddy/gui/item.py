@@ -299,6 +299,8 @@ class ItemWidget(QWidget):
 
     def _AppendFile(self, file_name):
         data = self._table.GetRow(self._id, ("files",))
+        if file_name in data:
+            return
         data["files"].append(file_name)
 
         # Here self._updating is used to prevent calls to DisplayItem()
