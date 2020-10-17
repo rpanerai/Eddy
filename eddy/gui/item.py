@@ -440,8 +440,13 @@ class LineEdit(QLineEdit):
 
         self.textEdited.connect(self.Edited)
 
+    # def focusOutEvent(self, event):
+    #     super().focusOutEvent(event)
+    #     self.home(False)
+
     def Write(self, text):
         super().setText(text)
+        self.home(False)
 
     def Read(self):
         text = self.text().strip()
