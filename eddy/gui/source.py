@@ -3,8 +3,8 @@ import itertools
 import json
 import os
 
-from PySide2.QtCore import Qt, Signal, QItemSelectionModel, QUrl
-from PySide2.QtGui import QIcon, QStandardItemModel, QStandardItem, QDesktopServices
+from PySide2.QtCore import Qt, Signal, QItemSelectionModel
+from PySide2.QtGui import QIcon, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import (
     QTreeView, QAbstractItemView, QAbstractItemDelegate, QStyledItemDelegate, QMenu, QMessageBox
 )
@@ -16,6 +16,7 @@ from eddy.network.arxiv import ArXivPlugin
 from eddy.core.web import WebSource
 from eddy.core.local import LocalSource
 from eddy.core.tag import Tag, TagBuilder
+from eddy.core.platform import OpenFolder
 
 
 class SourceModel(QStandardItemModel):
@@ -320,7 +321,7 @@ class SourcePanel(QTreeView):
             QIcon(icons.FILE_CHECK), "Find missing and orphan files…")
 
         path = os.path.dirname(item.data().database.file)
-        action_open.triggered.connect(partial(self._OpenPath, path))
+        action_open.triggered.connect(partial(OpenFolder, path))
 
         action_new_tag.triggered.connect(partial(self._AddTag, item))
 
@@ -344,10 +345,6 @@ class SourcePanel(QTreeView):
 
         self.setExpanded(self.model().indexFromItem(item), True)
         self.edit(self.model().indexFromItem(tag_item))
-
-    @staticmethod
-    def _OpenPath(path):
-        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
 
 
 class SourceDelegate(QStyledItemDelegate):

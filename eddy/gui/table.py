@@ -1,20 +1,20 @@
 import os
-import webbrowser
 from functools import partial
 import json
 from datetime import datetime
 
 from PySide2.QtCore import (
     Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex, QMimeData,
-    QByteArray, QUrl, QFileInfo
+    QByteArray, QFileInfo
 )
-from PySide2.QtGui import QIcon, QDrag, QDesktopServices
+from PySide2.QtGui import QIcon, QDrag
 from PySide2.QtWidgets import (
     QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel, QFileIconProvider
 )
 
 from eddy.icons import icons
 from eddy.core.web import SearchRequest
+from eddy.core.platform import OpenLocalDocument, OpenOnlineDocument, OpenWebURL
 
 
 class TableModel(QAbstractItemModel):
@@ -383,7 +383,7 @@ class TableView(QTreeView):
 
     def _HandleDoubleClickOnItem(self, index):
         for p in self.model().GetFilePaths(index.row()):
-            TableView._OpenLocalDocument(p)
+            OpenLocalDocument(p)
 
     def _HandleRightClickOnHeader(self, position):
         menu = QMenu()
@@ -466,9 +466,9 @@ class TableView(QTreeView):
             action_arxiv_pdf.setEnabled(False)
         else:
             arxiv_url = "https://arxiv.org/abs/" + arxiv_id
-            action_arxiv_page.triggered.connect(partial(self._OpenURL, arxiv_url))
+            action_arxiv_page.triggered.connect(partial(OpenWebURL, arxiv_url))
             pdf_url = "https://arxiv.org/pdf/" + arxiv_id + ".pdf"
-            action_arxiv_pdf.triggered.connect(partial(self._OpenOnlineDocument, pdf_url))
+            action_arxiv_pdf.triggered.connect(partial(OpenOnlineDocument, pdf_url))
 
         inspire_id = self.model().GetInspireId(row)
         if inspire_id is None:
@@ -479,7 +479,7 @@ class TableView(QTreeView):
             inspire_id = str(inspire_id)
 
             inspire_url = "https://labs.inspirehep.net/literature/" + inspire_id
-            action_inspire_page.triggered.connect(partial(self._OpenURL, inspire_url))
+            action_inspire_page.triggered.connect(partial(OpenWebURL, inspire_url))
 
             ref_search = SearchRequest(source="INSPIRE", query="citedby:recid:" + inspire_id)
             action_references.triggered.connect(partial(self.NewTabRequested.emit, ref_search))
@@ -493,7 +493,7 @@ class TableView(QTreeView):
         else:
             doi_urls = ("https://doi.org/" + s for s in dois)
             for u in doi_urls:
-                action_doi_link.triggered.connect(partial(self._OpenURL, u))
+                action_doi_link.triggered.connect(partial(OpenWebURL, u))
 
         action_delete.triggered.connect(partial(self.model().DeleteRows, (row,)))
 
@@ -516,7 +516,7 @@ class TableView(QTreeView):
         menu = QMenu()
         for (f, p) in zip(files, file_paths):
             a = menu.addAction(QFileIconProvider().icon(QFileInfo(f)), f)
-            a.triggered.connect(partial(self._OpenLocalDocument, p))
+            a.triggered.connect(partial(OpenLocalDocument, p))
         return menu
 
     def _TagsMenu(self, row):
@@ -560,15 +560,3 @@ class TableView(QTreeView):
     def _ResizeColumnsAtSectionResize(self, logicalIndex, oldSize, newSize):
         if logicalIndex == 1:
             self.header().resizeSection(2, self.header().sectionSize(2) - newSize + oldSize)
-
-    @staticmethod
-    def _OpenLocalDocument(path):
-        QDesktopServices.openUrl(QUrl.fromLocalFile(path))
-
-    @staticmethod
-    def _OpenOnlineDocument(url):
-        os.system("okular " + url + " &")
-
-    @staticmethod
-    def _OpenURL(url):
-        webbrowser.open(url)
