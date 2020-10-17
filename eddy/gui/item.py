@@ -1,8 +1,8 @@
 from datetime import datetime
 import os
 
-from PySide2.QtCore import Signal
-from PySide2.QtGui import QIcon
+from PySide2.QtCore import Qt, Signal
+from PySide2.QtGui import QIcon, QTextOption
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QGroupBox, QFormLayout, QScrollArea, QLineEdit, QTextEdit,
     QToolButton, QComboBox, QFileDialog, QMessageBox
@@ -498,6 +498,11 @@ class MultiLineTextEdit(AdaptiveTextEdit):
 
 
 class LineSplitTextEdit(AdaptiveTextEdit):
+    def __init__(self, min_height, parent=None):
+        super().__init__(min_height, parent)
+        self.setWordWrapMode(QTextOption.NoWrap)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
     def Read(self):
         lines = [l.strip() for l in self.toPlainText().splitlines()]
         return [l for l in lines if l != ""]
