@@ -1,5 +1,8 @@
 import os
 
+from PySide2.QtCore import QFileInfo
+from PySide2.QtWidgets import QFileIconProvider
+
 
 ICONS_FOLDER = os.path.dirname(os.path.abspath(__file__))
 
@@ -30,3 +33,6 @@ TAB_NEW = os.path.join(BREEZE_FOLDER, "tab_new.svg")
 TAG = os.path.join(BREEZE_FOLDER, "tag.svg")
 TAG_NEW = os.path.join(BREEZE_FOLDER, "tag_new.svg")
 WEB = os.path.join(BREEZE_FOLDER, "web.svg")
+
+def FileIcon(file_):
+    return QFileIconProvider().icon(QFileInfo(file_))

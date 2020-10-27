@@ -5,11 +5,11 @@ from datetime import datetime
 
 from PySide2.QtCore import (
     Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex, QMimeData,
-    QByteArray, QFileInfo
+    QByteArray
 )
 from PySide2.QtGui import QIcon, QDrag
 from PySide2.QtWidgets import (
-    QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel, QFileIconProvider
+    QAbstractItemView, QTreeView, QHeaderView, QMenu, QLabel
 )
 
 from eddy.icons import icons
@@ -515,7 +515,7 @@ class TableView(QTreeView):
 
         menu = QMenu()
         for (f, p) in zip(files, file_paths):
-            a = menu.addAction(QFileIconProvider().icon(QFileInfo(f)), f)
+            a = menu.addAction(icons.FileIcon(f), f)
             a.triggered.connect(partial(OpenLocalDocument, p))
         return menu
 
