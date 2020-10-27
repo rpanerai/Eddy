@@ -1,14 +1,17 @@
+from functools import partial
 from datetime import datetime
 import os
 
 from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QIcon, QTextOption
+from PySide2.QtGui import QIcon, QTextOption, QBrush
 from PySide2.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QGroupBox, QFormLayout, QScrollArea, QLineEdit, QTextEdit,
-    QToolButton, QComboBox, QFileDialog, QMessageBox
+    QToolButton, QComboBox, QFileDialog, QMessageBox, QAbstractItemView, QListWidget,
+    QListWidgetItem, QMenu
 )
 
 from eddy.icons import icons
+from eddy.core.platform import OpenInFolder, OpenLocalDocument
 
 
 class ItemWidget(QWidget):
@@ -62,8 +65,7 @@ class ItemWidget(QWidget):
         "inspire_id": lambda x: str(x) if x is not None else None,
         "year": lambda x: str(x) if x is not None else None,
         "dois": "\n".join,
-        "urls": "\n".join,
-        "files": "\n".join
+        "urls": "\n".join
     }
 
     def __init__(self, parent=None):
@@ -102,7 +104,7 @@ class ItemWidget(QWidget):
         self._arxiv_id = LineEdit()
         self._dois = LineSplitTextEdit(min_height)
         self._urls = LineSplitTextEdit(min_height)
-        self._files = LineSplitTextEdit(min_height)
+        self._files = FileList()
 
         for (k, v) in ItemWidget._FORMAT_TYPE.items():
             self._type.addItem(v, k)
@@ -111,6 +113,8 @@ class ItemWidget(QWidget):
         bold_font = self._title.document().defaultFont()
         bold_font.setBold(True)
         self._title.document().setDefaultFont(bold_font)
+
+        self._files.FileDropRequested.connect(self._DropFile)
 
         self._fields = {
             "type": self._type,
@@ -134,8 +138,7 @@ class ItemWidget(QWidget):
             "inspire_id": self._inspire_id,
             "arxiv_id": self._arxiv_id,
             "dois": self._dois,
-            "urls": self._urls,
-            "files": self._files
+            "urls": self._urls
         }
 
         self._details_frame = QGroupBox()
@@ -309,7 +312,19 @@ class ItemWidget(QWidget):
         self._table.EditRow(self._id, data)
         self._updating = False
 
-        self._files.Write(ItemWidget._FORMAT_FUNCTIONS["files"](data["files"]))
+        self._files.Write(data["files"])
+
+    def _DropFile(self, file_name):
+        data = self._table.GetRow(self._id, ("files",))
+        data["files"] = [f for f in data["files"] if f != file_name]
+
+        # Here self._updating is used to prevent calls to DisplayItem()
+        # triggered by an Updated() signal emitted by the database.
+        self._updating = True
+        self._table.EditRow(self._id, data)
+        self._updating = False
+
+        self._files.Write(data["files"])
 
     def SetLocalSource(self, source):
         if self._source == source:
@@ -334,8 +349,13 @@ class ItemWidget(QWidget):
 
         if self._source is None:
             self._files.setEnabled(False)
+            self._files.SetFolder(None)
         else:
             self._files.setEnabled(True)
+            try:
+                self._files.SetFolder(self._source.FilesDir())
+            except:
+                self._files.SetFolder(None)
 
     def Clear(self):
         self._scroll_widget.hide()
@@ -375,6 +395,7 @@ class ItemWidget(QWidget):
 
         for (k, w) in self._fields.items():
             w.Write(record[k])
+        self._files.Write(record["files"])
 
         self._scroll.verticalScrollBar().show()
         self._scroll_widget.show()
@@ -506,3 +527,63 @@ class LineSplitTextEdit(AdaptiveTextEdit):
     def Read(self):
         lines = [l.strip() for l in self.toPlainText().splitlines()]
         return [l for l in lines if l != ""]
+
+
+class FileList(QListWidget):
+    FileDropRequested = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self._folder = None
+
+        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setTextElideMode(Qt.ElideMiddle)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.itemDoubleClicked.connect(self._HandleDoubleClickOnItem)
+        self.customContextMenuRequested.connect(self._ShowContextMenu)
+
+    def SetFolder(self, folder):
+        self._folder = folder
+
+    def Write(self, files):
+        self.clear()
+        for f in files:
+            item = QListWidgetItem(f, self)
+            if self._folder is None:
+                item.setForeground(QBrush(Qt.red))
+                continue
+            filename = os.path.join(self._folder, f)
+            if not os.path.isfile(filename):
+                item.setForeground(QBrush(Qt.red))
+                continue
+            item.setIcon(icons.FileIcon(filename))
+            item.setData(Qt.UserRole, filename)
+        self.sortItems()
+
+    # def Read(self):
+    #     return[self.item(n).text() for n in range(self.count())]
+
+    def _ShowContextMenu(self, position):
+        item = self.itemAt(position)
+        if item is None:
+            self.clearSelection()
+            return
+
+        menu = QMenu()
+
+        if (filename := item.data(Qt.UserRole)) is not None:
+            action_open = menu.addAction(QIcon(icons.OPEN), "Open file in folder")
+            action_open.triggered.connect(partial(OpenInFolder, filename))
+
+        action_drop = menu.addAction(QIcon(icons.FILE_DELETE), "Drop file")
+        action_drop.triggered.connect(partial(self.FileDropRequested.emit, item.text()))
+
+        menu.exec_(self.viewport().mapToGlobal(position))
+
+    @staticmethod
+    def _HandleDoubleClickOnItem(item):
+        if (filename := item.data(Qt.UserRole)) is not None:
+            OpenLocalDocument(filename)
