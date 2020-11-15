@@ -24,7 +24,7 @@ class TableModel(QAbstractItemModel):
         "Date",
         "Authors",
         "Title",
-        "Citations"
+        "Cites"
     )
     _KEYS = (
         "date",
@@ -36,7 +36,7 @@ class TableModel(QAbstractItemModel):
         "Date": Qt.AlignLeft,
         "Authors": Qt.AlignLeft,
         "Title": Qt.AlignLeft,
-        "Citations": Qt.AlignRight
+        "Cites": Qt.AlignRight
     }
 
     def __init__(self, parent=None):
@@ -283,8 +283,6 @@ class TableView(QTreeView):
         self.header().customContextMenuRequested.connect(self._HandleRightClickOnHeader)
         self.header().setSectionsMovable(False)
         self.header().setStretchLastSection(False)
-        self.header().geometriesChanged.connect(self._ResizeColumnsAtGeometryChange)
-        self.header().sectionResized.connect(self._ResizeColumnsAtSectionResize)
 
         self._column_visibility = {h: True for h in TableModel.HEADERS}
         self._show_citations = True
@@ -311,7 +309,6 @@ class TableView(QTreeView):
         model.layoutChanged.connect(self._RestoreSelection)
 
         self._ResetColumnsSize()
-        self._ResizeColumnsAtGeometryChange()
 
     def reset(self):
         super().reset()
@@ -352,7 +349,6 @@ class TableView(QTreeView):
         if self._show_citations is not show:
             self._show_citations = show
             self._SetColumnVisibility()
-            self._ResizeColumnsAtGeometryChange()
 
     def _SaveSelection(self):
         self._selected_ids = [
@@ -389,7 +385,7 @@ class TableView(QTreeView):
         menu = QMenu()
 
         for h in TableModel.HEADERS:
-            if not self._show_citations and h == "Citations":
+            if not self._show_citations and h == "Cites":
                 continue
             a = menu.addAction(h)
             a.setCheckable(True)
@@ -534,7 +530,7 @@ class TableView(QTreeView):
 
     def _SetColumnVisibility(self):
         for (i, h) in enumerate(TableModel.HEADERS):
-            if not self._show_citations and h == "Citations":
+            if not self._show_citations and h == "Cites":
                 self.setColumnHidden(i, True)
                 continue
             self.setColumnHidden(i, not self._column_visibility[h])
@@ -542,21 +538,10 @@ class TableView(QTreeView):
     def _FlipColumnVisibility(self, header):
         self._column_visibility[header] = not self._column_visibility[header]
         self.setColumnHidden(TableModel.HEADERS.index(header), not self._column_visibility[header])
-        self._ResizeColumnsAtGeometryChange()
 
     def _ResetColumnsSize(self):
-        self.header().setSectionResizeMode(0, QHeaderView.Fixed)
-        self.header().resizeSection(0, 75)
+        self.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.header().setSectionResizeMode(1, QHeaderView.Interactive)
         self.header().resizeSection(1, 250)
-        self.header().setSectionResizeMode(3, QHeaderView.Fixed)
-        self.header().resizeSection(3, 64)
-
-    def _ResizeColumnsAtGeometryChange(self):
         self.header().setSectionResizeMode(2, QHeaderView.Stretch)
-        self.header().sectionSize(2) # Somehow this is necessary
-        self.header().setSectionResizeMode(2, QHeaderView.Interactive)
-
-    def _ResizeColumnsAtSectionResize(self, logicalIndex, oldSize, newSize):
-        if logicalIndex == 1:
-            self.header().resizeSection(2, self.header().sectionSize(2) - newSize + oldSize)
+        self.header().setSectionResizeMode(3, QHeaderView.ResizeToContents)
