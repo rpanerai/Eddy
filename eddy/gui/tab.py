@@ -5,6 +5,7 @@ from PySide2.QtWidgets import (
     QSizePolicy, QToolButton
 )
 
+from config import LEFT_PANEL_WIDTH
 from eddy.network.fetcher import Fetcher
 from eddy.database.database import Database
 from eddy.database.items import ItemsTable
@@ -101,7 +102,7 @@ class TabContent(QWidget):
         panel_splitter.addWidget(central_widget)
         panel_splitter.setStretchFactor(0, 0)
         panel_splitter.setStretchFactor(1, 1)
-        panel_splitter.moveSplitter(200, 1)
+        panel_splitter.moveSplitter(LEFT_PANEL_WIDTH, 1)
         panel_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         search_filter_layout.addWidget(self._search_bar)

@@ -2,11 +2,13 @@ import os
 import shutil
 import itertools
 
-from paths import STORAGE_FOLDER
 from eddy.core.tag import Tag, RootTag
 from eddy.database.database import Database
 from eddy.database.items import ItemsTable
 from eddy.database.tags import TagsTable
+
+
+STORAGE_FOLDER = "Files"
 
 
 class LocalSource:

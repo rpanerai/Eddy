@@ -4,6 +4,7 @@ from PySide2.QtCore import Qt, QSize
 from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import QApplication, QMainWindow, QAction, QStyle
 
+from config import WINDOW_SIZE
 from eddy.gui.tab import TabSystem
 from eddy.icons import icons
 
@@ -19,7 +20,7 @@ class MainWindow(QMainWindow):
             QStyle.alignedRect(
                 Qt.LeftToRight,
                 Qt.AlignCenter,
-                QSize(1250, 720),
+                QSize(*WINDOW_SIZE),
                 self.screen().availableGeometry()
             )
         )

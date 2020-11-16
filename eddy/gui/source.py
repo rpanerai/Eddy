@@ -9,12 +9,12 @@ from PySide2.QtWidgets import (
     QTreeView, QAbstractItemView, QAbstractItemDelegate, QStyledItemDelegate, QMenu, QMessageBox
 )
 
-from paths import STORAGE_FOLDER, LOCAL_DATABASES
+from config import LOCAL_DATABASES
 from eddy.icons import icons
 from eddy.network.inspire import InspirePlugin
 from eddy.network.arxiv import ArXivPlugin
 from eddy.core.web import WebSource
-from eddy.core.local import LocalSource
+from eddy.core.local import STORAGE_FOLDER, LocalSource
 from eddy.core.tag import Tag, TagBuilder
 from eddy.core.platform import OpenFolder
 
