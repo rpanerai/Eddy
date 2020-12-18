@@ -29,6 +29,7 @@ class TabContent(QWidget):
         self._database_table.Clear()
 
         self._last_search = None
+        self._fetching = False
 
         self._fetcher = Fetcher()
         self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
@@ -138,6 +139,10 @@ class TabContent(QWidget):
     def _HandleLocalSourceSelected(self, source, tag_ids):
         if self._web_source_active:
             self._web_source_active = False
+            if self._fetching:
+                self._fetcher.Stop()
+                self._database_table.Clear()
+                self._last_search = None
             self._search_bar.Clear()
             self._search_bar.SetQueryEditEnabled(False)
             self._table_view.SetShowCitations(False)
@@ -157,6 +162,7 @@ class TabContent(QWidget):
         self._fetcher.Fetch(search.plugin, search.query, 50)
 
     def _HandleFetchingStarted(self):
+        self._fetching = True
         self._status_bar.showMessage("Fetching…")
         self._progress_bar.reset()
         self._progress_bar.show()
@@ -167,6 +173,7 @@ class TabContent(QWidget):
         self._progress_bar.setValue(bytes_received)
 
     def _HandleFetchingCompleted(self, records_number):
+        self._fetching = False
         self._status_bar.showMessage(
             "Fetching completed: " + str(records_number) + " records found."
         )
@@ -174,11 +181,13 @@ class TabContent(QWidget):
         self._search_bar.SetStopEnabled(False)
 
     def _HandleFetchingStopped(self):
+        self._fetching = False
         self._status_bar.showMessage("Fetching stopped.")
         self._progress_bar.hide()
         self._search_bar.SetStopEnabled(False)
 
     def _HandleFetchingError(self, error):
+        self._fetching = False
         self._status_bar.showMessage("Fetching error: " + error + ".")
         self._progress_bar.hide()
         self._search_bar.SetStopEnabled(False)
