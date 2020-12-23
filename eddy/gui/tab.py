@@ -9,7 +9,8 @@ from config import LEFT_PANEL_WIDTH
 from eddy.network.fetcher import Fetcher
 from eddy.database.database import Database
 from eddy.database.items import ItemsTable
-from eddy.core.web import SearchRequest
+from eddy.core.local import LocalSource
+from eddy.core.web import WebSource, WebSearch, INSPIRE_SOURCE
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemWidget
 from eddy.gui.searchfilter import SearchBar, FilterBar
@@ -18,7 +19,7 @@ from eddy.icons import icons
 
 
 class TabContent(QWidget):
-    NewTabRequested = Signal(SearchRequest)
+    NewTabRequested = Signal(WebSearch)
     TitleRequested = Signal((str, str), ())
 
     def __init__(self, index, source_model, memory_database, parent=None):
@@ -45,8 +46,7 @@ class TabContent(QWidget):
         self._source_panel.LocalSourceSelected.connect(self._HandleLocalSourceSelected)
 
         self._search_bar = SearchBar()
-        self._search_bar.QueryLaunched.connect(self._source_panel.LaunchSearch)
-        self._source_panel.SearchRequested.connect(self._HandleSearchRequested)
+        self._search_bar.QueryLaunched.connect(self._HandleQueryLaunched)
         self._search_bar.StopPressed.connect(self.StopFetching)
 
         self._table_model = TableModel(self)
@@ -68,16 +68,16 @@ class TabContent(QWidget):
         self._progress_bar.hide()
         self._status_bar.addPermanentWidget(self._progress_bar)
 
-        self._web_source_active = False
-        self._source_panel.SelectSource("INSPIRE")
+        self._active_source = None
+        self._source_panel.SelectSource(INSPIRE_SOURCE)
 
         self._SetupUI()
 
         self.setFocusProxy(self._search_bar)
 
-    def RunSearch(self, search_request):
-        self._source_panel.SelectSource(search_request.source)
-        self._search_bar.LaunchQuery(search_request.query)
+    def RunSearch(self, search):
+        self._source_panel.SelectSource(search.source)
+        self._search_bar.LaunchQuery(search.query)
 
     def StopFetching(self):
         self._fetcher.Stop()
@@ -118,11 +118,12 @@ class TabContent(QWidget):
         main_layout.addWidget(self._status_bar)
         self.setLayout(main_layout)
 
-    def _HandleWebSourceSelected(self):
-        if self._web_source_active:
+    def _HandleWebSourceSelected(self, source):
+        if isinstance(self._active_source, WebSource):
+            self._active_source = source
             return
 
-        self._web_source_active = True
+        self._active_source = source
         self._search_bar.SetQueryEditEnabled(True)
         self._filter_bar.clear()
 
@@ -130,15 +131,14 @@ class TabContent(QWidget):
             self.TitleRequested[()].emit()
         else:
             self._search_bar.SetQuery(self._last_search.query)
-            self.TitleRequested.emit(self._last_search.icon, self._last_search.query)
+            self.TitleRequested.emit(self._last_search.source.icon, self._last_search.query)
 
         self._table_view.SetShowCitations(True)
         self._table_model.SetTable(self._database_table)
         self._item_widget.SetTable(self._database_table)
 
     def _HandleLocalSourceSelected(self, source, tag_ids):
-        if self._web_source_active:
-            self._web_source_active = False
+        if not isinstance(self._active_source, LocalSource):
             if self._fetching:
                 self._fetcher.Stop()
                 self._database_table.Clear()
@@ -147,6 +147,7 @@ class TabContent(QWidget):
             self._search_bar.SetQueryEditEnabled(False)
             self._table_view.SetShowCitations(False)
 
+        self._active_source = source
         self.TitleRequested.emit(icons.DATABASE, source.name)
         self._filter_bar.clear()
         self._status_bar.clearMessage()
@@ -154,12 +155,16 @@ class TabContent(QWidget):
         self._table_model.SetTags(tag_ids)
         self._item_widget.SetLocalSource(source)
 
-    def _HandleSearchRequested(self, search):
+    def _HandleQueryLaunched(self, query):
+        if not isinstance(self._active_source, WebSource):
+            return
+
         self._database_table.Clear()
         self._filter_bar.clear()
+        search = self._active_source.CreateSearch(query)
         self._last_search = search
-        self.TitleRequested.emit(search.icon, search.query)
-        self._fetcher.Fetch(search.plugin, search.query, 50)
+        self.TitleRequested.emit(search.source.icon, search.query)
+        self._fetcher.Fetch(search.source.plugin, search.query, 50)
 
     def _HandleFetchingStarted(self):
         self._fetching = True
@@ -237,7 +242,7 @@ class TabSystem(QTabWidget):
     def CloseCurrentTab(self):
         self._CloseTab(self.currentIndex())
 
-    def AddTab(self, search_request=False):
+    def AddTab(self, search=False):
         self._index = self._index + 1
         new_tab = TabContent(self._index, self._source_model, self._memory_database)
         self.addTab(new_tab, TabSystem._DEFAULT_TEXT)
@@ -250,8 +255,8 @@ class TabSystem(QTabWidget):
 
         new_tab.setFocus()
 
-        if search_request:
-            new_tab.RunSearch(search_request)
+        if search:
+            new_tab.RunSearch(search)
 
     def RenameTab(self, icon=QIcon(), text=_DEFAULT_TEXT):
         index = self.indexOf(self.sender())

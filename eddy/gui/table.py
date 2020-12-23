@@ -13,7 +13,7 @@ from PySide2.QtWidgets import (
 )
 
 from eddy.icons import icons
-from eddy.core.web import SearchRequest
+from eddy.core.web import INSPIRE_SOURCE
 from eddy.core.platform import OpenLocalDocument, OpenOnlineDocument, OpenWebURL
 
 
@@ -477,10 +477,10 @@ class TableView(QTreeView):
             inspire_url = "https://labs.inspirehep.net/literature/" + inspire_id
             action_inspire_page.triggered.connect(partial(OpenWebURL, inspire_url))
 
-            ref_search = SearchRequest(source="INSPIRE", query="citedby:recid:" + inspire_id)
+            ref_search = INSPIRE_SOURCE.CreateSearch("citedby:recid:" + inspire_id)
             action_references.triggered.connect(partial(self.NewTabRequested.emit, ref_search))
 
-            cit_search = SearchRequest(source="INSPIRE", query="refersto:recid:" + inspire_id)
+            cit_search = INSPIRE_SOURCE.CreateSearch("refersto:recid:" + inspire_id)
             action_citations.triggered.connect(partial(self.NewTabRequested.emit, cit_search))
 
         dois = self.model().GetDOIs(row)

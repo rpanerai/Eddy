@@ -11,20 +11,13 @@ from PySide2.QtWidgets import (
 
 from config import LOCAL_DATABASES
 from eddy.icons import icons
-from eddy.network.inspire import InspirePlugin
-from eddy.network.arxiv import ArXivPlugin
-from eddy.core.web import WebSource
+from eddy.core.web import WebSource, WEB_SOURCES
 from eddy.core.local import STORAGE_FOLDER, LocalSource
 from eddy.core.tag import Tag, TagBuilder
 from eddy.core.platform import OpenFolder
 
 
 class SourceModel(QStandardItemModel):
-    WEB_SOURCES = {
-        "INSPIRE": WebSource("INSPIRE", InspirePlugin, icons.INSPIRE),
-        "arXiv": WebSource("arXiv", ArXivPlugin, icons.ARXIV)
-    }
-
     ROOT_FLAGS = Qt.ItemIsEnabled
     WEB_SOURCE_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable
     LOCAL_SOURCE_FLAGS = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDropEnabled
@@ -46,9 +39,9 @@ class SourceModel(QStandardItemModel):
         root.setChild(1, local)
 
         self.ITEMS = {}
-        for (r, (n, s)) in enumerate(SourceModel.WEB_SOURCES.items()):
+        for (r, s) in enumerate(WEB_SOURCES):
             i = SourceModel._CreateItemFromData(s)
-            self.ITEMS[n] = i
+            self.ITEMS[s.name] = i
             web_search.setChild(r, i)
 
         for (r, (n, p)) in enumerate(LOCAL_DATABASES.items()):
@@ -191,9 +184,8 @@ class SourceModel(QStandardItemModel):
 
 class SourcePanel(QTreeView):
     SearchRequested = Signal(dict)
-    WebSourceSelected = Signal()
+    WebSourceSelected = Signal(WebSource)
     LocalSourceSelected = Signal(LocalSource, list)
-    # SourceSelected = Signal((WebSource,), (LocalSource,))
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -252,11 +244,10 @@ class SourcePanel(QTreeView):
         super().selectionChanged(selected, deselected)
 
         rows = self.selectionModel().selectedRows()
-        if rows == []:
+        if len(rows) != 1:
             return
 
-        item = self.model().itemFromIndex(rows[0])
-        data = item.data()
+        data = self.model().itemFromIndex(rows[0]).data()
         tag_ids = []
         if isinstance(data, Tag):
             source = data.source
@@ -267,10 +258,10 @@ class SourcePanel(QTreeView):
         if isinstance(source, LocalSource):
             self.LocalSourceSelected.emit(source, tag_ids)
         else:
-            self.WebSourceSelected.emit()
+            self.WebSourceSelected.emit(source)
 
     def SelectSource(self, source):
-        item = self.model().ITEMS[source]
+        item = self.model().ITEMS[source.name]
         index = self.model().indexFromItem(item)
 
         selection_model = self.selectionModel()
@@ -284,16 +275,6 @@ class SourcePanel(QTreeView):
             index,
             QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
         )
-
-    def LaunchSearch(self, query):
-        rows = self.selectionModel().selectedRows()
-        if len(rows) != 1:
-            return
-
-        data = self.model().itemFromIndex(rows[0]).data()
-
-        if isinstance(data, WebSource):
-            self.SearchRequested.emit(data.CreateSearch(query))
 
     def _HandleRightClickOnItem(self, position):
         index = self.indexAt(position)
