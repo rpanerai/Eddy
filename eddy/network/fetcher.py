@@ -39,7 +39,7 @@ class Fetcher(QObject):
         self._page = 1
 
         self.FetchingStarted.emit()
-        self._FetchBatch()
+        self._FirstRequest()
 
     def Stop(self):
         if self._reply is not None:
@@ -48,6 +48,28 @@ class Fetcher(QObject):
             self._reply.deleteLater()
             self._reply = None
             self.FetchingStopped.emit()
+
+    def _FirstRequest(self):
+        request = self._plugin.CreateFirstRequest(self._search_string)
+        if request is None:
+            self._FetchBatch()
+        else:
+            self._reply = self._manager.get(request)
+            self._reply.downloadProgress.connect(self.BatchProgress.emit)
+            self._reply.finished.connect(self._HandleFirstRequest)
+
+    def _HandleFirstRequest(self):
+        if self._reply.error() == QNetworkReply.NoError:
+            reply_string = str(self._reply.readAll(), "utf-8")
+            self._reply.deleteLater()
+
+            self._search_string = self._plugin.DecodeFirstRequest(reply_string)
+            self._FetchBatch()
+        else:
+            error = ParseNetworkError(self._reply.error())
+            self._reply.deleteLater()
+            self._reply = None
+            self.FetchingError.emit(error)
 
     def _FetchBatch(self):
         request = self._plugin.CreateRequest(self._search_string, self._batch_size, self._page)

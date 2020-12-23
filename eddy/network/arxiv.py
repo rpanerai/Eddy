@@ -7,6 +7,10 @@ from PySide2.QtNetwork import QNetworkRequest
 
 class ArXivPlugin():
     @staticmethod
+    def CreateFirstRequest(search_string):
+        return None
+
+    @staticmethod
     def CreateRequest(search_string, batch_size, page):
         url = (
             "http://export.arxiv.org/api/query?"
@@ -50,3 +54,39 @@ class ArXivPlugin():
             item["dois"] = [entry["arxiv_doi"]]
 
         return item
+
+
+class ArXivNewPlugin(ArXivPlugin):
+    @staticmethod
+    def CreateFirstRequest(search_string):
+        url = "http://export.arxiv.org/rss/" + search_string
+        request = QNetworkRequest(QUrl(url))
+        return request
+
+    @staticmethod
+    def DecodeFirstRequest(reply_string):
+        raw_data = feedparser.parse(reply_string)
+        # One can extract the category with, i.e.
+        # category = raw_data["feed"]["title"].split(" ")[0]
+        news = [
+            {"id": i["title"].split(":")[-1].split(" ")[0],
+            "category": i["title"].split("[")[-1].split("]")[0],
+            "new": i["title"][-8:-1] != "UPDATED"}
+            for i in raw_data["entries"]
+        ]
+
+        search_string = ",".join([i["id"] for i in news])
+        # It could be useful to also pass the size of the batch,
+        # size = len(news) + 1
+        return search_string
+
+    @staticmethod
+    def CreateRequest(search_string, batch_size, page):
+        url = (
+            "http://export.arxiv.org/api/query?"
+            + "id_list=" + urllib.parse.quote(search_string)
+            + "&start=" + str((page - 1) * batch_size)
+            + "&max_results=" + str(batch_size)
+        )
+        request = QNetworkRequest(QUrl(url))
+        return request

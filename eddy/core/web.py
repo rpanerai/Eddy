@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from eddy.network.inspire import InspirePlugin
-from eddy.network.arxiv import ArXivPlugin
+from eddy.network.arxiv import ArXivPlugin, ArXivNewPlugin
 
 from eddy.icons import icons
 
@@ -39,7 +39,8 @@ WEB_SOURCES = [
 assert (lambda x: len(x) == len(set(x)))([s.name for s in WEB_SOURCES])
 
 
-class SearchRequest(SimpleNamespace):
-    # The argument source contains the string associated with a key in SourceModel.WEB_SOURCES
-    def __init__(self, source, query):
-        super().__init__(source=source, query=query)
+CHILD_SOURCES = {
+    "arXiv": [
+        WebSource("new", ArXivNewPlugin, icons.ARXIV)
+    ]
+}

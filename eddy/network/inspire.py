@@ -7,6 +7,10 @@ from PySide2.QtNetwork import QNetworkRequest
 
 class InspirePlugin():
     @staticmethod
+    def CreateFirstRequest(search_string):
+        return None
+
+    @staticmethod
     def CreateRequest(search_string, batch_size, page):
         url = (
             "https://inspirehep.net/api/literature?sort=mostrecent"

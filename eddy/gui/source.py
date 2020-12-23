@@ -11,7 +11,7 @@ from PySide2.QtWidgets import (
 
 from config import LOCAL_DATABASES
 from eddy.icons import icons
-from eddy.core.web import WebSource, WEB_SOURCES
+from eddy.core.web import WebSource, WEB_SOURCES, CHILD_SOURCES
 from eddy.core.local import STORAGE_FOLDER, LocalSource
 from eddy.core.tag import Tag, TagBuilder
 from eddy.core.platform import OpenFolder
@@ -43,6 +43,10 @@ class SourceModel(QStandardItemModel):
             i = SourceModel._CreateItemFromData(s)
             self.ITEMS[s.name] = i
             web_search.setChild(r, i)
+        for (p, l) in CHILD_SOURCES.items():
+            for (r, s) in enumerate(l):
+                i = SourceModel._CreateItemFromData(s)
+                self.ITEMS[p].setChild(r, i)
 
         for (r, (n, p)) in enumerate(LOCAL_DATABASES.items()):
             if not os.path.isfile(p):
