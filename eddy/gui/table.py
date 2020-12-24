@@ -111,17 +111,19 @@ class TableModel(QAbstractItemModel):
         self.layoutChanged.emit()
 
     def mimeTypes(self):
-        return ["application/x-eddy"]
+        return ["application/x-eddy", "text/plain"]
 
     def mimeData(self, indexes):
         file_ = self._table.database.file
         ids = [self._ids[r] for r in list({i.row() for i in indexes})]
         records = [self._table.GetRow(i) for i in ids]
+        texkeys = [r["texkey"] for r in records if r["texkey"] is not None]
 
         data_list = [file_, ids, records]
 
         data = QMimeData()
         data.setData(self.mimeTypes()[0], QByteArray(json.dumps(data_list).encode("utf-8")))
+        data.setText(", ".join(texkeys))
         return data
 
     def SetLocalSource(self, source):
