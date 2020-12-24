@@ -1,10 +1,25 @@
 # Eddy
 
-Eddy is a software that finds, accesses and manages research, with a specific focus on the field of high-energy theoretical physics.
+Eddy is a reference management software with a specific focus on the field of high-energy theoretical physics.
 
 ## Status
 
 Eddy is in a very early stage of development. So far its functionality is limited. The planned feature list is long and it will take some time to get there.
+
+## Dependencies
+
+* **Python** 3.8+
+* **PySide2** 5.14+
+* **feedparser**
+
+## Usage
+
+To launch Eddy, run
+```
+python launcher.py
+```
+
+Eddy can be configured by editing the file `config.py`.
 
 ## License
 
