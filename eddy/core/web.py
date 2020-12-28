@@ -1,3 +1,5 @@
+import re
+
 from eddy.network.inspire import InspirePlugin
 from eddy.network.arxiv import (
     ArXivPlugin, ArXivNewPlugin_News, ArXivNewPlugin_CrossLists, ArXivNewPlugin_Replacements
@@ -31,6 +33,12 @@ INSPIRE_SOURCE = WebSource("INSPIRE", InspirePlugin, icons.INSPIRE)
 ARXIV_SOURCE = WebSource("arXiv", ArXivPlugin, icons.ARXIV)
 
 
+def AddACCap(query, cap):
+    if re.search(r"(^|\s)(ac|authorcount)(\W|$)", query):
+        return query
+    return query + " and " + cap
+
+
 WEB_SOURCES = [
     INSPIRE_SOURCE,
     ARXIV_SOURCE
@@ -38,6 +46,10 @@ WEB_SOURCES = [
 
 
 CHILD_SOURCES = {
+    "INSPIRE": [
+        WebSource("ac < 10", InspirePlugin, icons.INSPIRE,
+            query_map=lambda x: AddACCap(x, "ac<10"))
+    ],
     "arXiv": [
         WebSource("news", ArXivNewPlugin_News, icons.ARXIV,
             title_gen=lambda x: "news: " + x),
