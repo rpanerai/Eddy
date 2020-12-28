@@ -46,6 +46,7 @@ class SourceModel(QStandardItemModel):
         for (p, l) in CHILD_SOURCES.items():
             for (r, s) in enumerate(l):
                 i = SourceModel._CreateItemFromData(s)
+                self.ITEMS[s.name] = i
                 self.ITEMS[p].setChild(r, i)
 
         for (r, (n, p)) in enumerate(LOCAL_DATABASES.items()):

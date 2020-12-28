@@ -63,22 +63,29 @@ class ArXivNewPlugin(ArXivPlugin):
         request = QNetworkRequest(QUrl(url))
         return request
 
-    @staticmethod
-    def DecodeFirstRequest(reply_string):
+    @classmethod
+    def DecodeFirstRequest(cls, reply_string):
         raw_data = feedparser.parse(reply_string)
-        # One can extract the category with, i.e.
-        # category = raw_data["feed"]["title"].split(" ")[0]
         news = [
             {"id": i["title"].split(":")[-1].split(" ")[0],
-            "category": i["title"].split("[")[-1].split("]")[0],
+            "list": i["title"].split("[")[-1].split("]")[0],
             "new": i["title"][-8:-1] != "UPDATED"}
             for i in raw_data["entries"]
         ]
+        if len(news) == 0:
+            return ""
+
+        list_ = raw_data["feed"]["title"].split(" ")[0]
+        news = [d for d in news if cls.FilterItems(d, list_)]
 
         search_string = ",".join([i["id"] for i in news])
         # It could be useful to also pass the size of the batch,
         # size = len(news) + 1
         return search_string
+
+    @staticmethod
+    def FilterItems(item, list_):
+        return True
 
     @staticmethod
     def CreateRequest(search_string, batch_size, page):
@@ -90,3 +97,21 @@ class ArXivNewPlugin(ArXivPlugin):
         )
         request = QNetworkRequest(QUrl(url))
         return request
+
+
+class ArXivNewPlugin_News(ArXivNewPlugin):
+    @staticmethod
+    def FilterItems(item, list_):
+        return item["list"] == list_ and item["new"]
+
+
+class ArXivNewPlugin_CrossLists(ArXivNewPlugin):
+    @staticmethod
+    def FilterItems(item, list_):
+        return item["list"] != list_ and item["new"]
+
+
+class ArXivNewPlugin_Replacements(ArXivNewPlugin):
+    @staticmethod
+    def FilterItems(item, list_):
+        return not item["new"]

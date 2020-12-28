@@ -131,7 +131,7 @@ class TabContent(QWidget):
             self.TitleRequested[()].emit()
         else:
             self._search_bar.SetQuery(self._last_search.query)
-            self.TitleRequested.emit(self._last_search.source.icon, self._last_search.query)
+            self.TitleRequested.emit(self._last_search.source.icon, self._last_search.title)
 
         self._table_view.SetShowCitations(True)
         self._table_model.SetTable(self._database_table)
@@ -163,7 +163,7 @@ class TabContent(QWidget):
         self._filter_bar.clear()
         search = self._active_source.CreateSearch(query)
         self._last_search = search
-        self.TitleRequested.emit(search.source.icon, search.query)
+        self.TitleRequested.emit(search.source.icon, search.title)
         self._fetcher.Fetch(search.source.plugin, search.query, 50)
 
     def _HandleFetchingStarted(self):
