@@ -6,9 +6,7 @@ from PySide2.QtNetwork import QNetworkRequest
 
 
 class InspirePlugin():
-    @staticmethod
-    def CreateFirstRequest(search_string):
-        return None
+    DEFAULT_BATCH_SIZE = 50
 
     @staticmethod
     def CreateRequest(search_string, batch_size, page):

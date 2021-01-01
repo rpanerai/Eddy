@@ -163,7 +163,7 @@ class TabContent(QWidget):
         search = self._active_source.CreateSearch(query)
         self._last_search = search
         self.TitleRequested.emit(search.source.icon, search.title)
-        self._fetcher.Fetch(search.source.plugin, search.query, 50)
+        self._fetcher.Fetch(search.source.plugin, search.query)
 
     def _HandleFetchingStarted(self):
         self._status_bar.showMessage("Fetching…")
@@ -197,10 +197,10 @@ class TabContent(QWidget):
         self._search_bar.SetStopEnabled(False)
 
     def _HandleStatusUpdated(self, total, selected):
-        if not isinstance(self._active_source, LocalSource):
-            return
-        self._status_bar.showMessage(
-            str(total) + " item" + ("" if total == 1 else "s") + ", " + str(selected) + " selected."
+        if isinstance(self._active_source, LocalSource):
+            self._status_bar.showMessage(
+                str(total) + " item" + ("" if total == 1 else "s") + ", "
+                + str(selected) + " selected."
             )
 
 
