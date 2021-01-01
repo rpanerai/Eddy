@@ -30,7 +30,7 @@ class TabContent(QWidget):
         self._database_table.Clear()
 
         self._last_search = None
-        self._fetching = False
+        self._last_search_status = ""
 
         self._fetcher = Fetcher()
         self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
@@ -64,6 +64,7 @@ class TabContent(QWidget):
         self._item_widget.ItemUpdated.connect(self._table_model.Update)
 
         self._status_bar = QStatusBar()
+        self._table_view.StatusUpdated.connect(self._HandleStatusUpdated)
         self._progress_bar = QProgressBar()
         self._progress_bar.hide()
         self._status_bar.addPermanentWidget(self._progress_bar)
@@ -132,6 +133,7 @@ class TabContent(QWidget):
         else:
             self._search_bar.SetQuery(self._last_search.query)
             self.TitleRequested.emit(self._last_search.source.icon, self._last_search.title)
+        self._status_bar.showMessage(self._last_search_status)
 
         self._table_view.SetShowCitations(True)
         self._table_model.SetTable(self._database_table)
@@ -139,10 +141,7 @@ class TabContent(QWidget):
 
     def _HandleLocalSourceSelected(self, source, tag_ids):
         if not isinstance(self._active_source, LocalSource):
-            if self._fetching:
-                self._fetcher.Stop()
-                self._database_table.Clear()
-                self._last_search = None
+            self.StopFetching()
             self._search_bar.Clear()
             self._search_bar.SetQueryEditEnabled(False)
             self._table_view.SetShowCitations(False)
@@ -167,7 +166,6 @@ class TabContent(QWidget):
         self._fetcher.Fetch(search.source.plugin, search.query, 50)
 
     def _HandleFetchingStarted(self):
-        self._fetching = True
         self._status_bar.showMessage("Fetching…")
         self._progress_bar.reset()
         self._progress_bar.show()
@@ -178,24 +176,32 @@ class TabContent(QWidget):
         self._progress_bar.setValue(bytes_received)
 
     def _HandleFetchingCompleted(self, records_number):
-        self._fetching = False
-        self._status_bar.showMessage(
-            "Fetching completed: " + str(records_number) + " records found."
-        )
+        message = "Fetching completed: " + str(records_number) + " records found."
+        self._last_search_status = message
+        self._status_bar.showMessage(message)
         self._progress_bar.hide()
         self._search_bar.SetStopEnabled(False)
 
     def _HandleFetchingStopped(self):
-        self._fetching = False
-        self._status_bar.showMessage("Fetching stopped.")
+        message = "Fetching stopped."
+        self._last_search_status = message
+        self._status_bar.showMessage(message)
         self._progress_bar.hide()
         self._search_bar.SetStopEnabled(False)
 
     def _HandleFetchingError(self, error):
-        self._fetching = False
-        self._status_bar.showMessage("Fetching error: " + error + ".")
+        message = "Fetching error: " + error + "."
+        self._last_search_status = message
+        self._status_bar.showMessage(message)
         self._progress_bar.hide()
         self._search_bar.SetStopEnabled(False)
+
+    def _HandleStatusUpdated(self, total, selected):
+        if not isinstance(self._active_source, LocalSource):
+            return
+        self._status_bar.showMessage(
+            str(total) + " item" + ("" if total == 1 else "s") + ", " + str(selected) + " selected."
+            )
 
 
 class TabSystem(QTabWidget):
