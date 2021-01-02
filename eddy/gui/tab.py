@@ -59,7 +59,6 @@ class TabContent(QWidget):
         self._table_view.NewTabRequested.connect(self.NewTabRequested)
 
         self._item_widget = ItemWidget()
-        self._item_widget.SetTable(self._database_table)
         self._table_view.ItemSelected.connect(self._item_widget.DisplayItem)
         self._item_widget.ItemUpdated.connect(self._table_model.Update)
 
