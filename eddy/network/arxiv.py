@@ -11,7 +11,7 @@ class ArXivPlugin():
     @staticmethod
     def CreateRequest(search_string, batch_size, page):
         url = (
-            "http://export.arxiv.org/api/query?"
+            "https://export.arxiv.org/api/query?"
             + "search_query=" + urllib.parse.quote(search_string)
             + "&start=" + str((page - 1) * batch_size)
             + "&max_results=" + str(batch_size)
@@ -57,7 +57,7 @@ class ArXivPlugin():
 class ArXivNewPlugin(ArXivPlugin):
     @staticmethod
     def CreateFirstRequest(search_string):
-        url = "http://export.arxiv.org/rss/" + search_string
+        url = "https://export.arxiv.org/rss/" + search_string
         request = QNetworkRequest(QUrl(url))
         return request
 
@@ -88,7 +88,7 @@ class ArXivNewPlugin(ArXivPlugin):
     @staticmethod
     def CreateRequest(search_string, batch_size, page):
         url = (
-            "http://export.arxiv.org/api/query?"
+            "https://export.arxiv.org/api/query?"
             + "id_list=" + urllib.parse.quote(search_string)
             + "&start=" + str((page - 1) * batch_size)
             + "&max_results=" + str(batch_size)
