@@ -1,8 +1,8 @@
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, QSize
 from PySide2.QtGui import Qt, QIcon
 from PySide2.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTabWidget, QStatusBar, QProgressBar,
-    QSizePolicy, QToolButton
+    QSizePolicy, QToolButton, QLabel
 )
 
 from config import LEFT_PANEL_WIDTH
@@ -30,11 +30,9 @@ class TabContent(QWidget):
         self._database_table.Clear()
 
         self._last_search = None
-        self._last_search_status = ""
 
         self._fetcher = Fetcher()
         self._fetcher.FetchingStarted.connect(self._HandleFetchingStarted)
-        self._fetcher.BatchProgress.connect(self._HandleFetchingProgress)
         self._fetcher.BatchReady.connect(self._database_table.AddData)
         self._fetcher.FetchingFinished.connect(self._HandleFetchingCompleted)
         self._fetcher.FetchingStopped.connect(self._HandleFetchingStopped)
@@ -64,9 +62,9 @@ class TabContent(QWidget):
 
         self._status_bar = QStatusBar()
         self._table_view.StatusUpdated.connect(self._HandleStatusUpdated)
-        self._progress_bar = QProgressBar()
-        self._progress_bar.hide()
-        self._status_bar.addPermanentWidget(self._progress_bar)
+        self._search_status_bar = SearchStatus()
+        self._status_bar.addPermanentWidget(self._search_status_bar)
+        self._fetcher.BatchProgress.connect(self._search_status_bar.SetProgress)
 
         self._active_source = None
         self._source_panel.SelectSource(INSPIRE_SOURCE)
@@ -74,13 +72,6 @@ class TabContent(QWidget):
         self._SetupUI()
 
         self.setFocusProxy(self._search_bar)
-
-    def RunSearch(self, search):
-        self._source_panel.SelectSource(search.source)
-        self._search_bar.LaunchQuery(search.query)
-
-    def StopFetching(self):
-        self._fetcher.Stop()
 
     def _SetupUI(self):
         main_layout = QVBoxLayout()
@@ -112,11 +103,18 @@ class TabContent(QWidget):
 
         central_layout.addWidget(search_filter_widget)
         central_layout.addWidget(item_splitter)
+        central_layout.addWidget(self._status_bar)
         central_layout.setContentsMargins(0, 0, 0, 0)
 
         main_layout.addWidget(panel_splitter)
-        main_layout.addWidget(self._status_bar)
         self.setLayout(main_layout)
+
+    def RunSearch(self, search):
+        self._source_panel.SelectSource(search.source)
+        self._search_bar.LaunchQuery(search.query)
+
+    def StopFetching(self):
+        self._fetcher.Stop()
 
     def _HandleWebSourceSelected(self, source):
         if isinstance(self._active_source, WebSource):
@@ -132,7 +130,7 @@ class TabContent(QWidget):
         else:
             self._search_bar.SetQuery(self._last_search.query)
             self.TitleRequested.emit(self._last_search.source.icon, self._last_search.title)
-        self._status_bar.showMessage(self._last_search_status)
+        self._search_status_bar.text.show()
 
         self._table_view.SetShowCitations(True)
         self._table_model.SetTable(self._database_table)
@@ -148,7 +146,7 @@ class TabContent(QWidget):
         self._active_source = source
         self.TitleRequested.emit(icons.DATABASE, source.name)
         self._filter_bar.clear()
-        self._status_bar.clearMessage()
+        self._search_status_bar.text.hide()
         self._table_model.SetLocalSource(source)
         self._table_model.SetTags(tag_ids)
         self._item_widget.SetLocalSource(source)
@@ -159,48 +157,67 @@ class TabContent(QWidget):
 
         self._database_table.Clear()
         self._filter_bar.clear()
+
         search = self._active_source.CreateSearch(query)
         self._last_search = search
         self.TitleRequested.emit(search.source.icon, search.title)
         self._fetcher.Fetch(search.source.plugin, search.query)
 
     def _HandleFetchingStarted(self):
-        self._status_bar.showMessage("Fetching…")
-        self._progress_bar.reset()
-        self._progress_bar.show()
         self._search_bar.SetStopEnabled(True)
-
-    def _HandleFetchingProgress(self, bytes_received, bytes_total):
-        self._progress_bar.setMaximum(bytes_total)
-        self._progress_bar.setValue(bytes_received)
+        self._search_status_bar.text.clear()
+        self._search_status_bar.ShowProgress()
 
     def _HandleFetchingCompleted(self, records_number):
-        message = "Fetching completed: " + str(records_number) + " records found."
-        self._last_search_status = message
-        self._status_bar.showMessage(message)
-        self._progress_bar.hide()
-        self._search_bar.SetStopEnabled(False)
+        self._HandleFetchingEnded("Fetching completed: " + str(records_number) + " records found")
 
     def _HandleFetchingStopped(self):
-        message = "Fetching stopped."
-        self._last_search_status = message
-        self._status_bar.showMessage(message)
-        self._progress_bar.hide()
-        self._search_bar.SetStopEnabled(False)
+        self._HandleFetchingEnded("Fetching stopped")
 
     def _HandleFetchingError(self, error):
-        message = "Fetching error: " + error + "."
-        self._last_search_status = message
-        self._status_bar.showMessage(message)
-        self._progress_bar.hide()
+        self._HandleFetchingEnded("Fetching error: " + error)
+
+    def _HandleFetchingEnded(self, message):
         self._search_bar.SetStopEnabled(False)
+        self._search_status_bar.HideProgress()
+        self._search_status_bar.text.setText(message)
 
     def _HandleStatusUpdated(self, total, selected):
-        if isinstance(self._active_source, LocalSource):
-            self._status_bar.showMessage(
-                str(total) + " item" + ("" if total == 1 else "s") + ", "
-                + str(selected) + " selected."
-            )
+        self._status_bar.showMessage(
+            str(total) + " item" + ("" if total == 1 else "s")
+            + (", " + str(selected) + " selected" if total > 0 else "")
+        )
+
+
+class SearchStatus(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.text = QLabel()
+        self._progress = QProgressBar()
+        self._progress.hide()
+
+        layout = QHBoxLayout()
+        layout.addWidget(self.text)
+        layout.addWidget(self._progress)
+        layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(layout)
+
+    def sizeHint(self):
+        width = super().sizeHint().width()
+        height = self._progress.sizeHint().height()
+        return QSize(width, height)
+
+    def SetProgress(self, bytes_received, bytes_total):
+        self._progress.setMaximum(bytes_total)
+        self._progress.setValue(bytes_received)
+
+    def ShowProgress(self):
+        self._progress.show()
+
+    def HideProgress(self):
+        self._progress.hide()
+        self._progress.reset()
 
 
 class TabSystem(QTabWidget):
