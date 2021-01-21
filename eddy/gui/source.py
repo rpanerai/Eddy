@@ -35,6 +35,13 @@ class SourceModel(QStandardItemModel):
         local = QStandardItem(QIcon(icons.LOCAL), "Local")
         local.setFlags(SourceModel.ROOT_FLAGS)
 
+        def embolden_item(item):
+            font = item.font()
+            font.setBold(True)
+            item.setFont(font)
+        embolden_item(web_search)
+        embolden_item(local)
+
         root.setChild(0, web_search)
         root.setChild(1, local)
 
@@ -199,7 +206,7 @@ class SourcePanel(QTreeView):
         self.setItemDelegate(self._delegate)
 
         self.setUniformRowHeights(True)
-        self.setRootIsDecorated(True)
+        self.setRootIsDecorated(False)
         self.setSortingEnabled(False)
         self.setWordWrap(True)
         self.setHeaderHidden(True)
