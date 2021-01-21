@@ -47,21 +47,14 @@ class TabContent(QWidget):
         self._search_bar.QueryLaunched.connect(self._HandleQueryLaunched)
         self._search_bar.StopPressed.connect(self.StopFetching)
 
-        self._table_model = TableModel(self)
+        self._splitter = TableItemSplitter()
+        self._splitter.table_view.NewTabRequested.connect(self.NewTabRequested)
 
         self._filter_bar = FilterBar()
-        self._filter_bar.TextChanged.connect(self._table_model.Filter)
-
-        self._table_view = TableView()
-        self._table_view.setModel(self._table_model)
-        self._table_view.NewTabRequested.connect(self.NewTabRequested)
-
-        self._item_widget = ItemWidget()
-        self._table_view.ItemSelected.connect(self._item_widget.DisplayItem)
-        self._item_widget.ItemUpdated.connect(self._table_model.Update)
+        self._filter_bar.TextChanged.connect(self._splitter.table_model.Filter)
 
         self._status_bar = QStatusBar()
-        self._table_view.StatusUpdated.connect(self._HandleStatusUpdated)
+        self._splitter.table_view.StatusUpdated.connect(self._HandleStatusUpdated)
         self._search_status_bar = SearchStatus()
         self._status_bar.addPermanentWidget(self._search_status_bar)
         self._fetcher.BatchProgress.connect(self._search_status_bar.SetProgress)
@@ -80,14 +73,6 @@ class TabContent(QWidget):
         central_widget = QWidget()
         central_layout = QVBoxLayout(central_widget)
 
-        item_splitter = QSplitter(Qt.Horizontal)
-        item_splitter.setHandleWidth(4)
-        item_splitter.addWidget(self._table_view)
-        item_splitter.addWidget(self._item_widget)
-        item_splitter.setStretchFactor(0, 5)
-        item_splitter.setStretchFactor(1, 2)
-        item_splitter.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-
         panel_splitter = QSplitter(Qt.Horizontal)
         panel_splitter.setHandleWidth(4)
         panel_splitter.addWidget(self._source_panel)
@@ -102,7 +87,7 @@ class TabContent(QWidget):
         search_filter_layout.setContentsMargins(0, 0, 0, 0)
 
         central_layout.addWidget(search_filter_widget)
-        central_layout.addWidget(item_splitter)
+        central_layout.addWidget(self._splitter)
         central_layout.addWidget(self._status_bar)
         central_layout.setContentsMargins(0, 0, 0, 0)
 
@@ -132,25 +117,22 @@ class TabContent(QWidget):
             self.TitleRequested.emit(self._last_search.source.icon, self._last_search.title)
         self._search_status_bar.text.show()
 
-        self._table_view.SetShowCitations(True)
-        self._table_model.SetTable(self._database_table)
-        self._item_widget.SetTable(self._database_table)
+        self._splitter.table_view.SetShowCitations(True)
+        self._splitter.SetTable(self._database_table)
 
     def _HandleLocalSourceSelected(self, source, tags):
         if not isinstance(self._active_source, LocalSource):
             self.StopFetching()
             self._search_bar.Clear()
             self._search_bar.SetQueryEditEnabled(False)
-            self._table_view.SetShowCitations(False)
+            self._splitter.table_view.SetShowCitations(False)
 
         self._active_source = source
         title = source.name + (": " + tags[0].name if tags != [] else "")
         self.TitleRequested.emit(icons.DATABASE, title)
         self._filter_bar.clear()
         self._search_status_bar.text.hide()
-        self._table_model.SetLocalSource(source)
-        self._table_model.SetTags(tags)
-        self._item_widget.SetLocalSource(source)
+        self._splitter.SetLocalSource(source, tags)
 
     def _HandleQueryLaunched(self, query):
         if not isinstance(self._active_source, WebSource):
@@ -188,6 +170,36 @@ class TabContent(QWidget):
             str(total) + " item" + ("" if total == 1 else "s")
             + (", " + str(selected) + " selected" if total > 0 else "")
         )
+
+
+class TableItemSplitter(QSplitter):
+    def __init__(self, parent=None):
+        super().__init__(Qt.Horizontal, parent)
+
+        self.table_model = TableModel(self)
+
+        self.table_view = TableView()
+        self.table_view.setModel(self.table_model)
+
+        self.item_widget = ItemWidget()
+        self.table_view.ItemSelected.connect(self.item_widget.DisplayItem)
+        self.item_widget.ItemUpdated.connect(self.table_model.Update)
+
+        self.setHandleWidth(4)
+        self.addWidget(self.table_view)
+        self.addWidget(self.item_widget)
+        self.setStretchFactor(0, 5)
+        self.setStretchFactor(1, 2)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+    def SetTable(self, table):
+        self.table_model.SetTable(table)
+        self.item_widget.SetTable(table)
+
+    def SetLocalSource(self, source, tags):
+        self.table_model.SetLocalSource(source)
+        self.table_model.SetTags(tags)
+        self.item_widget.SetLocalSource(source)
 
 
 class SearchStatus(QWidget):
