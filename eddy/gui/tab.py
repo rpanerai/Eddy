@@ -136,7 +136,7 @@ class TabContent(QWidget):
         self._table_model.SetTable(self._database_table)
         self._item_widget.SetTable(self._database_table)
 
-    def _HandleLocalSourceSelected(self, source, tag_ids):
+    def _HandleLocalSourceSelected(self, source, tags):
         if not isinstance(self._active_source, LocalSource):
             self.StopFetching()
             self._search_bar.Clear()
@@ -144,11 +144,12 @@ class TabContent(QWidget):
             self._table_view.SetShowCitations(False)
 
         self._active_source = source
-        self.TitleRequested.emit(icons.DATABASE, source.name)
+        title = source.name + (": " + tags[0].name if tags != [] else "")
+        self.TitleRequested.emit(icons.DATABASE, title)
         self._filter_bar.clear()
         self._search_status_bar.text.hide()
         self._table_model.SetLocalSource(source)
-        self._table_model.SetTags(tag_ids)
+        self._table_model.SetTags(tags)
         self._item_widget.SetLocalSource(source)
 
     def _HandleQueryLaunched(self, query):

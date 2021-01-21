@@ -17,17 +17,14 @@ class AbstractTag(ABC):
         self.source = source
         self.id = id_
 
-    def ListChildren(self):
+    def ListChildren(self, recursive=False):
         return [
             Tag(self.source, t["id"], t["name"], self.id)
-            for t in self.source.tags_table.GetTable(self.id)
+            for t in self.source.tags_table.ChildTags(self.id, recursive=recursive)
         ]
 
     def ChildTagBuilder(self):
         return TagBuilder(self.source, self.id)
-
-    def ChildTagsIds(self):
-        return self.source.tags_table.ChildTags(self.id)
 
 
 class RootTag(AbstractTag):

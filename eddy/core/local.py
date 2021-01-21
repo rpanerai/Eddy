@@ -73,8 +73,10 @@ class LocalSource:
     def DeleteTagAndChildren(self, id_):
         self.tags_table.Delete((id_,))
         self.DropTag(id_)
-        for t in self.tags_table.GetTable(id_):
-            self.DeleteTagAndChildren(t["id"])
+        for t in self.tags_table.ChildTags(id_, recursive=True):
+            id_ = t["id"]
+            self.tags_table.Delete((id_,))
+            self.DropTag(id_)
 
     def TagNames(self):
         tags = self.tags_table.GetTable()

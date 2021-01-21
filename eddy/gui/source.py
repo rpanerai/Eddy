@@ -253,15 +253,15 @@ class SourcePanel(QTreeView):
             return
 
         data = self.model().itemFromIndex(rows[0]).data()
-        tag_ids = []
+        tags = []
         if isinstance(data, Tag):
             source = data.source
-            tag_ids = [data.id] + data.ChildTagsIds()
+            tags = [data] + data.ListChildren(recursive=True)
         else:
             source = data
 
         if isinstance(source, LocalSource):
-            self.LocalSourceSelected.emit(source, tag_ids)
+            self.LocalSourceSelected.emit(source, tags)
         else:
             self.WebSourceSelected.emit(source)
 

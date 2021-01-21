@@ -155,8 +155,8 @@ class TableModel(QAbstractItemModel):
         self.Clear()
         self.Update()
 
-    def SetTags(self, tag_ids):
-        self._tags = tag_ids
+    def SetTags(self, tags):
+        self._tags = [t.id for t in tags]
         self._Filter()
 
     def Clear(self):
