@@ -108,7 +108,7 @@ def parseField(key, val):
             elif char == " " and depth == 0:
                 if new_val[count:count+5] == " and ":
                     and_pos[-1] = (and_pos[-1][0], count)
-                    and_pos.append((count+6, None))
+                    and_pos.append((count+5, None))
 
         author_list = []
         for pos_i, pos_f in and_pos:

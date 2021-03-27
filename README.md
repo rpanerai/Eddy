@@ -11,7 +11,6 @@ Eddy is in a very early stage of development. So far its functionality is limite
 * **Python** 3.8+
 * **PySide2** 5.14+
 * **feedparser**
-* **bibtexparser** [optional]
 
 ## Usage
 
