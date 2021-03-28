@@ -30,7 +30,7 @@ class ParseError(Exception):
         super().__init__(self.message)
 
 
-def parseField(key, val):
+def ParseField(key, val):
     """Parses a single field of the form key = val"""
 
     new_key = key.strip(" \n\t")
@@ -121,7 +121,7 @@ def parseField(key, val):
     return {new_key: new_val}
 
 
-def parseEntry(entry):
+def ParseEntry(entry):
     """Parses a single bibtex entry and returns a dict"""
 
     output_dict = {}
@@ -185,7 +185,7 @@ def parseEntry(entry):
 
             for order, pos in enumerate(comma_pos[:-1]):
                 output_dict.update(
-                    parseField(fields[pos+1:equal_pos[order]],
+                    ParseField(fields[pos+1:equal_pos[order]],
                                fields[equal_pos[order]+1:comma_pos[order+1]])
                 )
 
@@ -198,7 +198,7 @@ def parseEntry(entry):
     return output_dict
 
 
-def parseBibtex(content):
+def ParseBibtex(content):
     """Parses a bibtex string and returns a database"""
 
     uncommented_content = re.sub("^%.*$", "", content, re.MULTILINE)
@@ -215,7 +215,7 @@ def parseBibtex(content):
         text = uncommented_content[start:end]
 
         try:
-            parsed = parseEntry(text)
+            parsed = ParseEntry(text)
         except ParseError as e:
             # For now we silently pass
             print(e)
