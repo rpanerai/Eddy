@@ -13,6 +13,7 @@ from eddy.core.local import LocalSource
 from eddy.core.web import WebSource, WebSearch, INSPIRE_SOURCE
 from eddy.gui.table import TableModel, TableView
 from eddy.gui.item import ItemWidget
+from eddy.gui.bibtex import BibTeXWidget
 from eddy.gui.searchfilter import SearchBar, FilterBar
 from eddy.gui.source import SourceModel, SourcePanel
 from eddy.icons import icons
@@ -182,12 +183,19 @@ class TableItemSplitter(QSplitter):
         self.table_view.setModel(self.table_model)
 
         self.item_widget = ItemWidget()
+        self.bibtex_widget = BibTeXWidget()
         self.table_view.ItemSelected.connect(self.item_widget.DisplayItem)
+        self.table_view.ItemSelected.connect(self.bibtex_widget.DisplayItem)
         self.item_widget.ItemUpdated.connect(self.table_model.Update)
+
+        property_tab = QTabWidget()
+        property_tab.setDocumentMode(True)
+        property_tab.addTab(self.item_widget, "Edit")
+        property_tab.addTab(self.bibtex_widget, "BibTeX")
 
         self.setHandleWidth(4)
         self.addWidget(self.table_view)
-        self.addWidget(self.item_widget)
+        self.addWidget(property_tab)
         self.setStretchFactor(0, 5)
         self.setStretchFactor(1, 2)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -195,11 +203,13 @@ class TableItemSplitter(QSplitter):
     def SetTable(self, table):
         self.table_model.SetTable(table)
         self.item_widget.SetTable(table)
+        self.bibtex_widget.SetTable(table)
 
     def SetLocalSource(self, source, tags):
         self.table_model.SetLocalSource(source)
         self.table_model.SetTags(tags)
         self.item_widget.SetLocalSource(source)
+        self.bibtex_widget.SetTable(source.table)
 
 
 class SearchStatus(QWidget):

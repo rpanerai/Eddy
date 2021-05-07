@@ -167,3 +167,25 @@ class InspirePlugin():
             item["dois"] = list({i["value"] for i in data["dois"]})
 
         return item
+
+
+class InspireBibTeXPlugin():
+    DEFAULT_BATCH_SIZE = 200
+
+    @staticmethod
+    def CreateRequest(search_string, batch_size, page):
+        url = (
+            "https://inspirehep.net/api/literature?"
+            + "&q=" + urllib.parse.quote(search_string)
+            + "&size=" + str(batch_size)
+            + "&page=" + str(page)
+            + "&format=bibtex"
+        )
+        request = QNetworkRequest(QUrl(url))
+        request.setRawHeader(b"Accept", b"application/x-bibtex")
+
+        return request
+
+    @staticmethod
+    def DecodeBatch(reply_string):
+        return (reply_string.split("\n\n"), None)
