@@ -9,12 +9,16 @@ from eddy.icons import icons
 
 
 class WebSource:
-    def __init__(self, name, plugin, icon, query_map=lambda x: x, title_gen=lambda x: x):
+    def __init__(
+            self, name, plugin, icon,
+            query_map=lambda x: x, title_gen=lambda x: x,
+            has_cites=False):
         self.name = name
         self.plugin = plugin
         self.icon = icon
         self._query_map = query_map
         self._title_gen = title_gen
+        self.has_cites = has_cites
 
     def CreateSearch(self, query):
         query = self._query_map(query)
@@ -29,7 +33,7 @@ class WebSearch:
         self.title = title
 
 
-INSPIRE_SOURCE = WebSource("INSPIRE", InspirePlugin, icons.INSPIRE)
+INSPIRE_SOURCE = WebSource("INSPIRE", InspirePlugin, icons.INSPIRE, has_cites=True)
 ARXIV_SOURCE = WebSource("arXiv", ArXivPlugin, icons.ARXIV)
 
 
@@ -48,7 +52,7 @@ WEB_SOURCES = [
 CHILD_SOURCES = {
     "INSPIRE": [
         WebSource("ac < 10", InspirePlugin, icons.INSPIRE,
-            query_map=lambda x: AddACCap(x, "ac<10"))
+            query_map=lambda x: AddACCap(x, "ac<10"), has_cites=True)
     ],
     "arXiv": [
         WebSource("news", ArXivNewPlugin_News, icons.ARXIV,

@@ -103,6 +103,9 @@ class TabContent(QWidget):
         self._fetcher.Stop()
 
     def _HandleWebSourceSelected(self, source):
+        if self._last_search is None:
+            self._splitter.table_view.SetShowCitations(source.has_cites)
+
         if isinstance(self._active_source, WebSource):
             self._active_source = source
             return
@@ -116,9 +119,9 @@ class TabContent(QWidget):
         else:
             self._search_bar.SetQuery(self._last_search.query)
             self.TitleRequested.emit(self._last_search.source.icon, self._last_search.title)
+            self._splitter.table_view.SetShowCitations(self._last_search.source.has_cites)
         self._search_status_bar.text.show()
 
-        self._splitter.table_view.SetShowCitations(True)
         self._splitter.SetTable(self._database_table)
 
     def _HandleLocalSourceSelected(self, source, tags):
@@ -145,6 +148,7 @@ class TabContent(QWidget):
         search = self._active_source.CreateSearch(query)
         self._last_search = search
         self.TitleRequested.emit(search.source.icon, search.title)
+        self._splitter.table_view.SetShowCitations(self._active_source.has_cites)
         self._fetcher.Fetch(search.source.plugin, search.query)
 
     def _HandleFetchingStarted(self):
