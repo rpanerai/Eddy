@@ -125,3 +125,15 @@ class ItemsTable(Table):
                     d[k] = self._DECODE_FUNCTIONS[k](d[k])
 
         return data
+
+    def GetTotalCitations(self, ids):
+        count = 0
+
+        for i in ids:
+            query = "SELECT citations FROM " + self._name + " WHERE id = " + str(i)
+
+            cursor = self._connection.cursor()
+            cursor.execute(query)
+            count = count + int(cursor.fetchone()[0])
+
+        return count

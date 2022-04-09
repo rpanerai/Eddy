@@ -266,7 +266,7 @@ class TableModel(QAbstractItemModel):
 class TableView(QTreeView):
     ItemSelected = Signal(int)
     NewTabRequested = Signal(dict)
-    StatusUpdated = Signal(int, int)
+    StatusUpdated = Signal(int, list)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -321,13 +321,13 @@ class TableView(QTreeView):
     def selectionChanged(self, selected, deselected):
         super().selectionChanged(selected, deselected)
 
-        rows = [r.row() for r in self.selectionModel().selectedRows()]
-        if len(rows) == 1:
-            self.ItemSelected.emit(self.model().GetId(rows[0]))
+        ids = [self.model().GetId(r.row()) for r in self.selectionModel().selectedRows()]
+        if len(ids) == 1:
+            self.ItemSelected.emit(ids[0])
         else:
             self.ItemSelected.emit(-1)
 
-        self.StatusUpdated.emit(self.model().rowCount(), len(rows))
+        self.StatusUpdated.emit(self.model().rowCount(), ids)
 
     def startDrag(self, supportedActions):
         # We reimplement this to visualize a tooltip instead of entire rows while dragging.

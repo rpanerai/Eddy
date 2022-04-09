@@ -170,11 +170,18 @@ class TabContent(QWidget):
         self._search_status_bar.HideProgress()
         self._search_status_bar.text.setText(message)
 
-    def _HandleStatusUpdated(self, total, selected):
-        self._status_bar.showMessage(
+    def _HandleStatusUpdated(self, total, selected_ids):
+        message = (
             str(total) + " item" + ("" if total == 1 else "s")
-            + (", " + str(selected) + " selected" if total > 0 else "")
+            + (", " + str(len(selected_ids)) + " selected" if total > 0 else "")
         )
+
+        if selected_ids != []:
+            if isinstance(self._active_source, WebSource) and self._last_search.source.has_cites:
+                citations = self._database_table.GetTotalCitations(selected_ids)
+                message = message + " (" + str(citations) + " citations among selected)"
+
+        self._status_bar.showMessage(message)
 
 
 class TableItemSplitter(QSplitter):
