@@ -111,6 +111,17 @@ class InspirePlugin():
         return output
 
     @staticmethod
+    def _DecodeArXiv(eprint):
+        output = {}
+
+        output["arxiv_id"] = eprint["value"]
+
+        if "categories" in eprint:
+            output["arxiv_cats"] = eprint["categories"]
+
+        return output
+
+    @staticmethod
     def _DecodeEntry(entry):
         item = {}
         data = entry["metadata"]
@@ -161,7 +172,7 @@ class InspirePlugin():
             item["texkey"] = data["texkeys"][0]
 
         if "arxiv_eprints" in data:
-            item["arxiv_id"] = data["arxiv_eprints"][0]["value"]
+            item.update(InspirePlugin._DecodeArXiv(data["arxiv_eprints"][0]))
 
         if "dois" in data:
             item["dois"] = list({i["value"] for i in data["dois"]})

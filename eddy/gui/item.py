@@ -40,6 +40,7 @@ class ItemWidget(QWidget):
         "texkey",
         "inspire_id",
         "arxiv_id",
+        "arxiv_cats",
         "dois",
         "urls",
         "files"
@@ -60,6 +61,7 @@ class ItemWidget(QWidget):
         "authors": "\n".join,
         "editors": "\n".join,
         "isbns": "\n".join,
+        "arxiv_cats": "\n".join,
         # Alternatively one could use
         # lambda x: "\n".join([a.split(",", 1)[0] for a in x])
         "inspire_id": lambda x: str(x) if x is not None else None,
@@ -102,6 +104,7 @@ class ItemWidget(QWidget):
         self._texkey = LineEdit()
         self._inspire_id = LineEdit()
         self._arxiv_id = LineEdit()
+        self._arxiv_cats = LineSplitTextEdit(min_height)
         self._dois = LineSplitTextEdit(min_height)
         self._urls = LineSplitTextEdit(min_height)
         self._files = FileList()
@@ -137,6 +140,7 @@ class ItemWidget(QWidget):
             "texkey": self._texkey,
             "inspire_id": self._inspire_id,
             "arxiv_id": self._arxiv_id,
+            "arxiv_cats": self._arxiv_cats,
             "dois": self._dois,
             "urls": self._urls
         }
@@ -197,6 +201,7 @@ class ItemWidget(QWidget):
         form_layout.addRow("BibTeX", self._texkey)
         form_layout.addRow("INSPIRE", self._inspire_id)
         form_layout.addRow("arXiv", self._arxiv_id)
+        form_layout.addRow("Lists", self._arxiv_cats)
         form_layout.addRow("DOIs", self._dois)
         form_layout.addRow("URLs", self._urls)
         form_layout.addRow("Files", self._files)

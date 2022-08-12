@@ -47,6 +47,7 @@ class ArXivPlugin():
             item["publication"] = entry["arxiv_journal_ref"]
 
         item["arxiv_id"] = entry["id"].rsplit("/abs/", 1)[1].rsplit("v", 1)[0]
+        item["arxiv_cats"] = [d["term"] for d in entry["tags"]]
 
         if "arxiv_doi" in entry:
             item["dois"] = [entry["arxiv_doi"]]
