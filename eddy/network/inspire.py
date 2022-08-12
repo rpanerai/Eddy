@@ -3,32 +3,36 @@ import json
 
 from PySide2.QtCore import QUrl
 from PySide2.QtNetwork import QNetworkRequest
+from eddy.network.fetcher import Callback
 
 
-class InspirePlugin():
-    DEFAULT_BATCH_SIZE = 50
+class InspirePlugin:
+    BATCH_SIZE = 50
 
-    @staticmethod
-    def CreateRequest(search_string, batch_size, page):
-        url = (
-            "https://inspirehep.net/api/literature?sort=mostrecent"
-            + "&q=" + urllib.parse.quote(search_string)
-            + "&size=" + str(batch_size)
-            + "&page=" + str(page)
-        )
-        request = QNetworkRequest(QUrl(url))
-        request.setRawHeader(b"Accept", b"application/json")
-
-        return request
+    class Status:
+        def __init__(self, search_string, page):
+            self.search_string = search_string
+            self.page = page
 
     @staticmethod
-    def DecodeBatch(reply_string):
+    def Start(search_string):
+        status = InspirePlugin.Status(search_string, 1)
+        request = InspirePlugin._CreateRequest(status)
+
+        return (status, Callback([], request))
+
+    @staticmethod
+    def HandleReply(status, reply_string):
         raw_data = json.loads(reply_string)
         data = [InspirePlugin._DecodeEntry(d) for d in raw_data["hits"]["hits"]]
 
         total = raw_data["hits"]["total"]
 
-        return (data, total)
+        if total > status.page * InspirePlugin.BATCH_SIZE:
+            status.page = status.page + 1
+            return (status, Callback(data, InspirePlugin._CreateRequest(status)))
+        else:
+            return (None, Callback(data, None))
 
     _TYPES = {
         "article": "A",
@@ -41,6 +45,19 @@ class InspirePlugin():
         "activity report": "R",
         "thesis": "T"
     }
+
+    @staticmethod
+    def _CreateRequest(status):
+        url = (
+            "https://inspirehep.net/api/literature?sort=mostrecent"
+            + "&q=" + urllib.parse.quote(status.search_string)
+            + "&size=" + str(InspirePlugin.BATCH_SIZE)
+            + "&page=" + str(status.page)
+        )
+        request = QNetworkRequest(QUrl(url))
+        request.setRawHeader(b"Accept", b"application/json")
+
+        return request
 
     @staticmethod
     def _DecodeJournal(pub_info):
@@ -180,23 +197,20 @@ class InspirePlugin():
         return item
 
 
-class InspireBibTeXPlugin():
-    DEFAULT_BATCH_SIZE = 200
-
+class InspireBibTeXPlugin:
     @staticmethod
-    def CreateRequest(search_string, batch_size, page):
+    def Start(search_string):
         url = (
             "https://inspirehep.net/api/literature?"
             + "&q=" + urllib.parse.quote(search_string)
-            + "&size=" + str(batch_size)
-            + "&page=" + str(page)
+            + "&size=1"
             + "&format=bibtex"
         )
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader(b"Accept", b"application/x-bibtex")
 
-        return request
+        return (None, Callback([], request))
 
     @staticmethod
-    def DecodeBatch(reply_string):
-        return (reply_string.split("\n\n"), None)
+    def HandleReply(status, reply_string):
+        return (None, Callback(reply_string.split("\n\n"), None))

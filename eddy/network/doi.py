@@ -1,19 +1,18 @@
 from PySide2.QtCore import QUrl
 from PySide2.QtNetwork import QNetworkRequest
+from eddy.network.fetcher import Callback
 
 
 class DOIBibTeXPlugin():
-    DEFAULT_BATCH_SIZE = 1
-
     @staticmethod
-    def CreateRequest(search_string, batch_size, page):
+    def Start(search_string):
         # url = "http://doi.org/" + search_string
         url = "https://api.crossref.org/works/" + search_string + "/transform/application/x-bibtex"
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader(b"Accept", b"application/x-bibtex")
 
-        return request
+        return(None, Callback([], request))
 
     @staticmethod
-    def DecodeBatch(reply_string):
-        return ([reply_string.replace("\t", "    ")], 1)
+    def HandleReply(status, reply_string):
+        return (None, Callback([reply_string.replace("\t", "    ")], None))

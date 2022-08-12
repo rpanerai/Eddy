@@ -99,7 +99,7 @@ class BibTeXWidget(QWidget):
         self._dowload_doi.setEnabled(has_doi)
 
     def _FetchINSPIRE(self):
-        self._fetcher.Fetch(InspireBibTeXPlugin, "recid:" + str(self._inspire_id), batch_size=2)
+        self._fetcher.Fetch(InspireBibTeXPlugin, "recid:" + str(self._inspire_id))
 
     def _FetchDOI(self):
         self._fetcher.Fetch(DOIBibTeXPlugin, self._doi)
@@ -107,5 +107,5 @@ class BibTeXWidget(QWidget):
     def _HandleBatchReady(self, batch):
         self._bibtex_string = batch[0]
 
-    def _HandleFetchingCompleted(self, records_number):
+    def _HandleFetchingCompleted(self):
         self._text_edit.setPlainText(self._bibtex_string)

@@ -156,8 +156,8 @@ class TabContent(QWidget):
         self._search_status_bar.text.clear()
         self._search_status_bar.ShowProgress()
 
-    def _HandleFetchingCompleted(self, records_number):
-        self._HandleFetchingEnded("Fetching completed: " + str(records_number) + " records found")
+    def _HandleFetchingCompleted(self):
+        self._HandleFetchingEnded("Fetching completed")
 
     def _HandleFetchingStopped(self):
         self._HandleFetchingEnded("Fetching stopped")
