@@ -2,7 +2,7 @@ import re
 
 from eddy.network.inspire import InspirePlugin
 from eddy.network.arxiv import (
-    ArXivPlugin, ArXivNewPlugin_News, ArXivNewPlugin_CrossLists, ArXivNewPlugin_Replacements
+    ArXivPlugin, ArXivPlugin_New, ArXivPlugin_NewWithCrossLists, ArXivPlugin_NewAll
 )
 
 from eddy.icons import icons
@@ -34,7 +34,9 @@ class WebSearch:
 
 
 INSPIRE_SOURCE = WebSource("INSPIRE", InspirePlugin, icons.INSPIRE, has_cites=True)
-ARXIV_SOURCE = WebSource("arXiv", ArXivPlugin, icons.ARXIV)
+ARXIV_SOURCE = WebSource("arXiv Search", ArXivPlugin, icons.ARXIV)
+ARXIV_NEW_SOURCE = WebSource("arXiv New", ArXivPlugin_New, icons.ARXIV,
+    title_gen=lambda x: "new: " + x)
 
 
 def AddACCap(query, cap):
@@ -45,7 +47,8 @@ def AddACCap(query, cap):
 
 WEB_SOURCES = [
     INSPIRE_SOURCE,
-    ARXIV_SOURCE
+    ARXIV_SOURCE,
+    ARXIV_NEW_SOURCE
 ]
 
 
@@ -54,13 +57,12 @@ CHILD_SOURCES = {
         WebSource("ac < 10", InspirePlugin, icons.INSPIRE,
             query_map=lambda x: AddACCap(x, "ac<10"), has_cites=True)
     ],
-    "arXiv": [
-        WebSource("news", ArXivNewPlugin_News, icons.ARXIV,
-            title_gen=lambda x: "news: " + x),
-        WebSource("cross-lists", ArXivNewPlugin_CrossLists, icons.ARXIV,
-            title_gen=lambda x: "cross-lists: " + x),
-        WebSource("replacements", ArXivNewPlugin_Replacements, icons.ARXIV,
-            title_gen=lambda x: "replacements: " + x)
+    "arXiv Search": [],
+    "arXiv New": [
+        WebSource("+ Cross-Lists", ArXivPlugin_NewWithCrossLists, icons.ARXIV,
+            title_gen=lambda x: "new: " + x),
+        WebSource("All", ArXivPlugin_NewAll, icons.ARXIV,
+            title_gen=lambda x: "new: " + x)
     ]
 }
 

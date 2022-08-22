@@ -30,7 +30,7 @@ class SourceModel(QStandardItemModel):
         root = self.invisibleRootItem()
         self.TagBeingCreated = None
 
-        web_search = QStandardItem(QIcon(icons.WEB), "Web Search")
+        web_search = QStandardItem(QIcon(icons.WEB), "Web")
         web_search.setFlags(SourceModel.ROOT_FLAGS)
         local = QStandardItem(QIcon(icons.LOCAL), "Local")
         local.setFlags(SourceModel.ROOT_FLAGS)

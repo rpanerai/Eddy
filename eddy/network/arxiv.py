@@ -1,4 +1,4 @@
-from urllib import request
+import itertools
 import urllib.parse
 import feedparser
 
@@ -23,19 +23,6 @@ class ArXivPlugin():
         return (status, Callback([], request))
 
     @staticmethod
-    def _CreateRequest(status):
-        url = (
-            "https://export.arxiv.org/api/query?"
-            + "search_query=" + urllib.parse.quote(status.search_string)
-            + "&start=" + str(status.last_n)
-            + "&max_results=" + str(ArXivPlugin.BATCH_SIZE)
-            + "&sortBy=submittedDate&sortOrder=descending"
-        )
-        request = QNetworkRequest(QUrl(url))
-
-        return request
-
-    @staticmethod
     def HandleReply(status, reply_string):
         raw_data = feedparser.parse(reply_string)
         data = [ArXivPlugin._DecodeEntry(d) for d in raw_data["entries"]]
@@ -47,6 +34,19 @@ class ArXivPlugin():
             return (status, Callback(data, ArXivPlugin._CreateRequest(status)))
         else:
             return (None, Callback(data, None))
+
+    @staticmethod
+    def _CreateRequest(status):
+        url = (
+            "https://export.arxiv.org/api/query?"
+            + "search_query=" + urllib.parse.quote(status.search_string)
+            + "&start=" + str(status.last_n)
+            + "&max_results=" + str(ArXivPlugin.BATCH_SIZE)
+            + "&sortBy=submittedDate&sortOrder=descending"
+        )
+        request = QNetworkRequest(QUrl(url))
+
+        return request
 
     @staticmethod
     def _DecodeEntry(entry):
@@ -73,32 +73,72 @@ class ArXivPlugin():
         return item
 
 
-class ArXivNewPlugin(ArXivPlugin):
+class ArXivPlugin_New(ArXivPlugin):
+    CATEGORIES = (
+        "astro-ph",
+        "cond-mat",
+        "cs",
+        "econ",
+        "eess",
+        "gr-qc",
+        "hep-ex",
+        "hep-lat",
+        "hep-ph",
+        "hep-th",
+        "math",
+        "math-ph",
+        "nlin",
+        "nucl-ex",
+        "nucl-th",
+        "physics",
+        "q-bio",
+        "q-fin",
+        "quant-ph",
+        "stat"
+    )
+
     class Status:
-        def __init__(self, category, last_n):
-            self.category = category
+        def __init__(self, categories, last_n):
+            self.ids = dict((c, None) for c in categories)
+            self.search_string = None
             self.last_n = last_n
-            self.ids = None
 
     @staticmethod
     def Start(search_string):
-        status = ArXivNewPlugin.Status(search_string, 0)
-        request = ArXivNewPlugin._CreateRSSRequest(status)
+        categories = search_string.replace(","," ").split()
+        categories = [c for c in categories if c in ArXivPlugin_New.CATEGORIES]
+
+        if categories == []:
+            return (None, Callback([], None))
+
+        status = ArXivPlugin_New.Status(categories, 0)
+        request = ArXivPlugin_New._CreateRSSRequest(status)
 
         return (status, Callback([], request))
 
     @classmethod
     def HandleReply(cls, status, reply_string):
-        if status.ids is None:
-            status.ids = cls._DecodeRSSRequest(reply_string)
-            request = ArXivNewPlugin._CreateRequest(status)
+        if status.search_string is not None:
+            return ArXivPlugin.HandleReply(status, reply_string)
+
+        status.ids.update(cls._DecodeRSSRequest(reply_string))
+        if None in status.ids.values():
+            request = ArXivPlugin_New._CreateRSSRequest(status)
             return (status, Callback([], request))
         else:
-            return ArXivPlugin.HandleReply(status, reply_string)
+            ids = set(itertools.chain.from_iterable(status.ids.values()))
+            status.search_string = ",".join(ids)
+            request = ArXivPlugin_New._CreateRequest(status)
+            return (status, Callback([], request))
+
 
     @staticmethod
     def _CreateRSSRequest(status):
-        url = "https://export.arxiv.org/rss/" + status.category
+        for (c,l) in status.ids.items():
+            if l is None:
+                break
+
+        url = "https://export.arxiv.org/rss/" + c
         request = QNetworkRequest(QUrl(url))
         return request
 
@@ -106,7 +146,7 @@ class ArXivNewPlugin(ArXivPlugin):
     def _CreateRequest(status):
         url = (
             "https://export.arxiv.org/api/query?"
-            + "id_list=" + urllib.parse.quote(status.ids)
+            + "id_list=" + urllib.parse.quote(status.search_string)
             + "&start=" + str(status.last_n)
             + "&max_results=" + str(ArXivPlugin.BATCH_SIZE)
         )
@@ -116,41 +156,28 @@ class ArXivNewPlugin(ArXivPlugin):
     @classmethod
     def _DecodeRSSRequest(cls, reply_string):
         raw_data = feedparser.parse(reply_string)
+        category = raw_data["feed"]["title"].split(" ")[0]
         news = [
             {"id": i["title"].split(":")[-1].split(" ")[0],
             "list": i["title"].split("[")[-1].split("]")[0],
             "new": i["title"][-8:-1] != "UPDATED"}
             for i in raw_data["entries"]
         ]
-        if len(news) == 0:
-            return ""
+        news = [d for d in news if cls._FilterItems(d, category)]
+        return {category: [i["id"] for i in news]}
 
-        list_ = raw_data["feed"]["title"].split(" ")[0]
-        news = [d for d in news if cls._FilterItems(d, list_)]
-
-        search_string = ",".join([i["id"] for i in news])
-        # It could be useful to also pass the size of the batch,
-        # size = len(news) + 1
-        return search_string
-
-    @staticmethod
-    def _FilterItems(item, list_):
-        return True
-
-
-class ArXivNewPlugin_News(ArXivNewPlugin):
     @staticmethod
     def _FilterItems(item, list_):
         return item["list"] == list_ and item["new"]
 
 
-class ArXivNewPlugin_CrossLists(ArXivNewPlugin):
+class ArXivPlugin_NewWithCrossLists(ArXivPlugin_New):
     @staticmethod
     def _FilterItems(item, list_):
-        return item["list"] != list_ and item["new"]
+        return item["new"]
 
 
-class ArXivNewPlugin_Replacements(ArXivNewPlugin):
+class ArXivPlugin_NewAll(ArXivPlugin_New):
     @staticmethod
     def _FilterItems(item, list_):
-        return not item["new"]
+        return True
