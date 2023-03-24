@@ -1,6 +1,6 @@
 from functools import partial
 from datetime import datetime
-import os
+from pathlib import Path
 
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QIcon, QTextOption, QBrush
@@ -292,18 +292,18 @@ class ItemWidget(QWidget):
             return
 
         (file_path, _) = QFileDialog.getOpenFileName(
-            None, "Open Document", files_dir, "Documents (*.pdf *.djvu)"
+            None, "Open Document", str(files_dir), "Documents (*.pdf *.djvu)"
         )
         if file_path == "":
             return
-        file_name = os.path.basename(file_path)
+        file_path = Path(file_path).resolve()
 
         try:
             renaming = self._source.SaveFiles((file_path,))
         except:
             QMessageBox.critical(None, "Error", "Error while copying the file.")
         else:
-            self._AppendFile(renaming.get(file_name, file_name))
+            self._AppendFile(renaming.get(file_path.name, file_path.name))
 
     def _AppendFile(self, file_name):
         data = self._table.GetRow(self._id, ("files",))
@@ -357,10 +357,7 @@ class ItemWidget(QWidget):
             self._files.SetFolder(None)
         else:
             self._files.setEnabled(True)
-            try:
-                self._files.SetFolder(self._source.FilesDir())
-            except:
-                self._files.SetFolder(None)
+            self._files.SetFolder(self._source.FilesDir())
 
     def Clear(self):
         self._scroll_widget.hide()
@@ -560,12 +557,12 @@ class FileList(QListWidget):
             if self._folder is None:
                 item.setForeground(QBrush(Qt.red))
                 continue
-            filename = os.path.join(self._folder, f)
-            if not os.path.isfile(filename):
+            file_ = self._folder / f
+            if not file_.is_file():
                 item.setForeground(QBrush(Qt.red))
                 continue
-            item.setIcon(icons.FileIcon(filename))
-            item.setData(Qt.UserRole, filename)
+            item.setIcon(icons.FileIcon(file_))
+            item.setData(Qt.UserRole, file_)
         self.sortItems()
 
     # def Read(self):
@@ -579,9 +576,9 @@ class FileList(QListWidget):
 
         menu = QMenu()
 
-        if (filename := item.data(Qt.UserRole)) is not None:
+        if (file_ := item.data(Qt.UserRole)) is not None:
             action_open = menu.addAction(QIcon(icons.OPEN), "Open file in folder")
-            action_open.triggered.connect(partial(OpenInFolder, filename))
+            action_open.triggered.connect(partial(OpenInFolder, file_))
 
         action_drop = menu.addAction(QIcon(icons.FILE_DELETE), "Drop file")
         action_drop.triggered.connect(partial(self.FileDropRequested.emit, item.text()))

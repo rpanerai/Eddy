@@ -27,32 +27,32 @@ def WhichLinuxDesktop():
     return "other"
 
 def OpenFolder(path):
-    QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
 
 def OpenInFolder(path):
-    dir_ = os.path.dirname(path)
     platform = WhichPlatform()
     if platform == "windows":
-        args = ["/select,", QDir.toNativeSeparators(path)]
+        args = ["/select,", QDir.toNativeSeparators(str(path))]
         QProcess.startDetached("explorer", args)
         return
     if platform == "mac":
         args = [
             "-e", "tell application \"Finder\"",
             "-e", "activate",
-            "-e", "select POSIX file \"" + path + "\"",
+            "-e", "select POSIX file \"" + str(path) + "\"",
             "-e", "end tell",
             "-e", "return"
         ]
         QProcess.execute('/usr/bin/osascript', args)
         return
     if platform == "linux" and WhichLinuxDesktop() == "kde" and IsInstalled("dolphin"):
-        os.system("dolphin --select '" + path + "' &")
+        os.system("dolphin --select '" + str(path) + "' &")
         return
-    QDesktopServices.openUrl(QUrl.fromLocalFile(dir_))
+    dir_ = path.parent
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(dir_)))
 
 def OpenLocalDocument(path):
-    QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(path)))
 
 def OpenOnlineDocument(url):
     if WhichPlatform() == "linux":

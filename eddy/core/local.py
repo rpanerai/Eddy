@@ -1,4 +1,3 @@
-import os
 import shutil
 import itertools
 
@@ -14,34 +13,35 @@ STORAGE_FOLDER = "Files"
 class LocalSource:
     def __init__(self, name, file):
         self.name = name
-        self.database = Database(os.path.realpath(file))
+        self.database = Database(file)
         self.table = ItemsTable(self.database)
         self.tags_table = TagsTable(self.database)
 
     def FilesDir(self):
-        dir_ = os.path.join(os.path.dirname(self.database.file), STORAGE_FOLDER)
-        if not os.path.isdir(dir_):
-            os.mkdir(dir_)
+        dir_ = self.database.file.parent / STORAGE_FOLDER
+        if not dir_.is_dir():
+            try:
+                dir_.mkdir()
+            except:
+                return None
         return dir_
 
     def SaveFiles(self, paths):
-        paths = set(map(os.path.realpath, paths))
+        paths = set(paths)
         files_dir = self.FilesDir()
 
         renamings = {}
         for path in paths:
-            file_ = os.path.basename(path)
-            new_path = os.path.join(files_dir, file_)
+            new_path = files_dir / path.name
             if path == new_path:
                 continue
             i = 1
-            while os.path.exists(new_path):
+            while new_path.exists():
                 i = i + 1
-                (body, ext) = os.path.splitext(new_path)
-                new_path = body + "(" + str(i) + ")" + ext
+                new_path = files_dir / (path.stem + "(" + str(i) + ")" + path.suffix)
             shutil.copy2(path, new_path)
             if i > 1:
-                renamings[file_] = os.path.basename(new_path)
+                renamings[path.name] = new_path.name
 
         return renamings
 
@@ -87,8 +87,7 @@ class LocalSource:
         return {t["id"]: t["name"] for t in tags}
 
     def CheckFiles(self):
-        (_, _, files_present) = next(os.walk(self.FilesDir()))
-        files_present = set(files_present)
+        files_present = {f.name for f in self.FilesDir().iterdir() if f.is_file()}
 
         records = self.table.GetTable(("files",))
         files_needed = set(itertools.chain(*[d["files"] for d in records]))
@@ -96,10 +95,10 @@ class LocalSource:
         orphans = files_present - files_needed
         missing = files_needed - files_present
 
-        dir_ = os.path.dirname(self.database.file)
-        with open(os.path.join(dir_, self.name + "_orphans.txt"), "w") as f:
+        dir_ = self.database.file.parent
+        with open(dir_ / (self.name + "_orphans.txt"), "w") as f:
             for s in orphans:
                 f.write(f"{s}\n")
-        with open(os.path.join(dir_, self.name + "_missing.txt"), "w") as f:
+        with open(dir_ / (self.name + "_missing.txt"), "w") as f:
             for s in missing:
                 f.write(f"{s}\n")

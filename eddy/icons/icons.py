@@ -36,4 +36,4 @@ TAG_NEW = str(BREEZE_FOLDER / "tag_new.svg")
 WEB = str(BREEZE_FOLDER / "web.svg")
 
 def FileIcon(file_):
-    return QFileIconProvider().icon(QFileInfo(file_))
+    return QFileIconProvider().icon(QFileInfo(str(file_)))

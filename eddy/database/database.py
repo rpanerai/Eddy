@@ -1,4 +1,5 @@
 import sqlite3
+from pathlib import Path
 
 from PySide2.QtCore import QObject, Signal
 
@@ -7,12 +8,19 @@ class Database(QObject):
     def __init__(self, file=":memory:", parent=None):
         super().__init__(parent)
 
-        self.file = file
+        match file:
+            case ":memory:":
+                self.file = ":memory:"
+            case str():
+                self.file = Path(file).resolve()
+            case Path():
+                self.file = file.resolve()
+
         self.connection = sqlite3.connect(self.file, isolation_level=None)
 
     def __del__(self):
         self.connection.close()
-        print("Closing connection to database '" + self.file + "'")
+        print("Closing connection to database '" + str(self.file) + "'")
 
 
 class Table(QObject):

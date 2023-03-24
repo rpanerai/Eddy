@@ -1,4 +1,3 @@
-import os
 from functools import partial
 import json
 from datetime import datetime
@@ -114,7 +113,7 @@ class TableModel(QAbstractItemModel):
         return ["application/x-eddy", "text/plain"]
 
     def mimeData(self, indexes):
-        file_ = self._table.database.file
+        file_ = str(self._table.database.file)
         ids = [self._ids[r] for r in list({i.row() for i in indexes})]
         records = [self._table.GetRow(i) for i in ids]
         texkeys = [r["texkey"] for r in records if r["texkey"] is not None]
@@ -228,10 +227,8 @@ class TableModel(QAbstractItemModel):
             return []
 
         dir_ = self.source.FilesDir()
-        if dir_ is None:
-            return []
 
-        return [os.path.join(dir_, f) for f in self.GetFiles(row)]
+        return [dir_ / f for f in self.GetFiles(row)]
 
     def FilterSelection(self, ids):
         return [i for i in ids if i in self._ids]
@@ -514,7 +511,7 @@ class TableView(QTreeView):
         if len(file_paths) == 0:
             return None
 
-        files = [os.path.basename(p) for p in file_paths]
+        files = [p.name for p in file_paths]
 
         menu = QMenu()
         for (f, p) in zip(files, file_paths):

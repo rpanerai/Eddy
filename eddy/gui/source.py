@@ -1,7 +1,7 @@
 from functools import partial
 import itertools
 import json
-import os
+from pathlib import Path
 
 from PySide2.QtCore import Qt, Signal, QItemSelectionModel
 from PySide2.QtGui import QIcon, QStandardItemModel, QStandardItem
@@ -57,7 +57,7 @@ class SourceModel(QStandardItemModel):
                 self.ITEMS[p].setChild(r, i)
 
         for (r, (n, p)) in enumerate(LOCAL_DATABASES.items()):
-            if not os.path.isfile(p):
+            if not Path(p).is_file():
                 print("Error: Cannot find database file", p)
                 continue
 
@@ -81,7 +81,7 @@ class SourceModel(QStandardItemModel):
         if isinstance(target, LocalSource):
             # Prevent drops when origin and target databases coincide
             origin_file = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))[0]
-            return target.database.file != origin_file
+            return str(target.database.file) != origin_file
 
         if isinstance(target, Tag):
             return True
@@ -96,7 +96,7 @@ class SourceModel(QStandardItemModel):
             return SourceModel._DropIntoSource(target, origin_file, records)
 
         if isinstance(target, Tag):
-            if target.source.database.file == origin_file:
+            if str(target.source.database.file) == origin_file:
                 target.source.AssignToTag(ids, target.id)
                 return True
             return SourceModel._DropIntoSource(target.source, origin_file, records, target.id)
@@ -180,8 +180,8 @@ class SourceModel(QStandardItemModel):
             target.table.AddData(records)
             return True
 
-        origin_dir = os.path.join(os.path.dirname(os.path.realpath(origin_file)), STORAGE_FOLDER)
-        paths = [os.path.join(origin_dir, f) for f in files]
+        origin_dir = Path(origin_file).parent / STORAGE_FOLDER
+        paths = [origin_dir / f for f in files]
         try:
             renamings = target.SaveFiles(paths)
         except:
@@ -313,7 +313,7 @@ class SourcePanel(QTreeView):
         action_check_files = menu.addAction(
             QIcon(icons.FILE_CHECK), "Find missing and orphan files…")
 
-        path = os.path.dirname(item.data().database.file)
+        path = item.data().database.file.parent
         action_open.triggered.connect(partial(OpenFolder, path))
 
         action_new_tag.triggered.connect(partial(self._AddTag, item))

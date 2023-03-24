@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 import sys
-import os
+from pathlib import Path
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, ROOT_DIR)
+ROOT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT_DIR))
 
 from eddy.main import run
 
