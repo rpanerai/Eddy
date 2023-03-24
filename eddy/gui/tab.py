@@ -27,7 +27,6 @@ class TabContent(QWidget):
         super().__init__(parent)
 
         self._database_table = ItemsTable(memory_database, "tab" + str(index), drop_on_del=True)
-        # self._database_table = ItemsTable(Database("./test.db"), "items", drop_on_del=False)
         self._database_table.Clear()
 
         self._last_search = None
