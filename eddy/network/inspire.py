@@ -157,10 +157,12 @@ class InspirePlugin:
         for a in data.get("authors", []):
             if "editor" in a.get("inspire_roles", []):
                 editors.append(a["full_name"])
-                editors_bais.append(a.get("bai", None))
+                editors_bais.append(
+                    next((i for i in a["ids"] if i["schema"] == "INSPIRE BAI"))["value"])
             else:
                 authors.append(a["full_name"])
-                authors_bais.append(a.get("bai", None))
+                authors_bais.append(
+                    next((i for i in a["ids"] if i["schema"] == "INSPIRE BAI"))["value"])
         if authors != []:
             item["authors"] = authors
             item["authors_bais"] = authors_bais
