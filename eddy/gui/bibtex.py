@@ -12,7 +12,6 @@ class BibTeXWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._source = None
         self._table = None
         self._id = -1
         self._inspire_id = None
