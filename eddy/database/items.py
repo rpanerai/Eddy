@@ -105,21 +105,21 @@ class ItemsTable(Table):
 
         where_clauses = []
         if (n_filters := len(filter_strings)) > 0:
-            where_clauses.append("(" + " AND ".join(["authors || title LIKE ?"] * n_filters) + ")")
+            where_clauses.append(f"({' AND '.join(['authors || title LIKE ?'] * n_filters)})")
         if (n_tags := len(tags)) > 0:
             format_tags = "replace(replace(replace(tags, '[', ' '), ']', ' '), ',', '')"
-            where_clauses.append("(" + " OR ".join([format_tags + " LIKE ?"] * n_tags) + ")")
+            where_clauses.append(f"({' OR '.join([f'{format_tags} LIKE ?'] * n_tags)})")
         where_string = " AND ".join(where_clauses)
 
-        query = "SELECT " + ", ".join(keys) + " FROM " + self._name
+        query = f"SELECT {', '.join(keys)} FROM {self._name}"
         if where_string != "":
-            query = query + " WHERE " + where_string
+            query = f"{query} WHERE {where_string}"
         if sort_key is not None:
-            query = query + " ORDER BY " + sort_key + " " + sort_order
+            query = f"{query} ORDER BY {sort_key} {sort_order}"
 
         patterns = (
-            tuple("%" + f + "%" for f in filter_strings)
-            + tuple("% " + str(t) + " %" for t in tags)
+            tuple(f"%{f}%" for f in filter_strings)
+            + tuple(f"% {t} %" for t in tags)
         )
 
         cursor = self._connection.cursor()
@@ -136,7 +136,7 @@ class ItemsTable(Table):
         count = 0
 
         for i in ids:
-            query = "SELECT citations FROM " + self._name + " WHERE id = " + str(i)
+            query = f"SELECT citations FROM {self._name} WHERE id = {i}"
 
             cursor = self._connection.cursor()
             cursor.execute(query)

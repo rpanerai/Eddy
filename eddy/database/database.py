@@ -20,7 +20,7 @@ class Database(QObject):
 
     def __del__(self):
         self.connection.close()
-        print("Closing connection to database '" + str(self.file) + "'")
+        print(f"Closing connection to database '{self.file}'")
 
 
 class Table(QObject):
@@ -46,24 +46,24 @@ class Table(QObject):
     def __del__(self):
         if self._drop_on_del:
             cursor = self._connection.cursor()
-            cursor.execute("DROP TABLE IF EXISTS " + self._name)
-            print("Dropping table '" + self._name + "'")
+            cursor.execute(f"DROP TABLE IF EXISTS {self._name}")
+            print(f"Dropping table '{self._name}'")
 
     def Clear(self):
         cursor = self._connection.cursor()
-        cursor.execute("DROP TABLE IF EXISTS " + self._name)
+        cursor.execute(f"DROP TABLE IF EXISTS {self._name}")
 
-        keys = ", ".join([k + " " + t for k, t in self._KEYS.items()])
-        cursor.execute("CREATE TABLE " + self._name + " (" + keys + ")")
+        keys = ", ".join([f"{k} {t}" for k, t in self._KEYS.items()])
+        cursor.execute(f"CREATE TABLE {self._name} ({keys})")
 
         self.Cleared.emit()
 
     def AddData(self, data):
         keys = self._DEFAULTS.keys()
 
-        keys_str = "(" + ', '.join(keys) + ")"
-        placeholder = "(" + ', '.join('?' * len(keys)) + ")"
-        query = "INSERT INTO " + self._name + keys_str + " VALUES " + placeholder
+        keys_str = f"({', '.join(keys)})"
+        placeholder = f"({', '.join('?' * len(keys))})"
+        query = f"INSERT INTO {self._name}{keys_str} VALUES {placeholder}"
         values = [
             tuple(
                 self._ENCODE_FUNCTIONS.get(k, lambda x: x)(d.get(k, self._DEFAULTS[k]))
@@ -83,7 +83,7 @@ class Table(QObject):
         return cursor.lastrowid
 
     def Delete(self, ids):
-        query = "DELETE FROM " + self._name + " WHERE id = ?"
+        query = f"DELETE FROM {self._name} WHERE id = ?"
         ids = [(i,) for i in ids]
 
         cursor = self._connection.cursor()
@@ -97,7 +97,7 @@ class Table(QObject):
         else:
             keys_ = list({k for k in keys if k in self._DEFAULTS.keys()})
 
-        query = "SELECT " + ", ".join(keys_) + " FROM " + self._name + " WHERE id = " + str(id_)
+        query = f"SELECT {', '.join(keys_)} FROM {self._name} WHERE id = {id_}"
 
         cursor = self._connection.cursor()
         cursor.execute(query)
@@ -114,7 +114,7 @@ class Table(QObject):
         else:
             keys_ = list({k for k in keys if k in self._KEYS.keys()})
 
-        query = "SELECT " + ", ".join(keys_) + " FROM " + self._name
+        query = f"SELECT {', '.join(keys_)} FROM {self._name}"
 
         cursor = self._connection.cursor()
         cursor.execute(query)
@@ -129,10 +129,10 @@ class Table(QObject):
     def EditRow(self, id_, data):
         keys = [k for k in data.keys() if k in self._DEFAULTS.keys()]
 
-        keys_str = "(" + ', '.join(keys) + ")"
-        placeholder = "(" + ', '.join('?' * len(keys)) + ")"
+        keys_str = f"({', '.join(keys)})"
+        placeholder = f"({', '.join('?' * len(keys))})"
 
-        query = "UPDATE " + self._name + " SET " + keys_str + " = " + placeholder + " WHERE id = ?"
+        query = f"UPDATE {self._name} SET {keys_str} = {placeholder} WHERE id = ?"
 
         values = [self._ENCODE_FUNCTIONS.get(k, lambda x: x)(data[k]) for k in keys]
         values.append(id_)

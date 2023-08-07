@@ -6,8 +6,8 @@ from eddy.network.fetcher import Callback
 class DOIBibTeXPlugin():
     @staticmethod
     def Start(search_string):
-        # url = "http://doi.org/" + search_string
-        url = "https://api.crossref.org/works/" + search_string + "/transform/application/x-bibtex"
+        # url = f"http://doi.org/{search_string}"
+        url = f"https://api.crossref.org/works/{search_string}/transform/application/x-bibtex"
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader(b"Accept", b"application/x-bibtex")
 

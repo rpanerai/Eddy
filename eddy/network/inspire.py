@@ -49,10 +49,10 @@ class InspirePlugin:
     @staticmethod
     def _CreateRequest(status):
         url = (
-            "https://inspirehep.net/api/literature?sort=mostrecent"
-            + "&q=" + urllib.parse.quote(status.search_string)
-            + "&size=" + str(InspirePlugin.BATCH_SIZE)
-            + "&page=" + str(status.page)
+            f"https://inspirehep.net/api/literature?sort=mostrecent"
+            f"&q={urllib.parse.quote(status.search_string)}"
+            f"&size={InspirePlugin.BATCH_SIZE}"
+            f"&page={status.page}"
         )
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader(b"Accept", b"application/json")
@@ -80,7 +80,7 @@ class InspirePlugin:
         if "page_start" in pub_info:
             pages = pub_info["page_start"]
             if "page_end" in pub_info:
-                pages = pages + "-" + pub_info["page_end"]
+                pages = f"{pages}-{pub_info['page_end']}"
         elif "artid" in pub_info:
             pages = pub_info["artid"]
         else:
@@ -173,9 +173,13 @@ class InspirePlugin:
             item["editors_bais"] = editors_bais
 
         item["title"] = data["titles"][0]["title"]
+        # item["title"] = next(
+        #     (t["title"] for t in data["titles"] if "<math display=" not in t["title"]))
 
         if "abstracts" in data:
             item["abstract"] = (data["abstracts"][0]["value"])
+            # item["abstract"] = next(
+            #     (t["value"] for t in data["abstracts"] if "<math display=" not in t["value"]))
 
         item["citations"] = data["citation_count"]
 
@@ -205,10 +209,10 @@ class InspireBibTeXPlugin:
     @staticmethod
     def Start(search_string):
         url = (
-            "https://inspirehep.net/api/literature?"
-            + "&q=" + urllib.parse.quote(search_string)
-            + "&size=1"
-            + "&format=bibtex"
+            f"https://inspirehep.net/api/literature?"
+            f"&q={urllib.parse.quote(search_string)}"
+            f"&size=1"
+            f"&format=bibtex"
         )
         request = QNetworkRequest(QUrl(url))
         request.setRawHeader(b"Accept", b"application/x-bibtex")

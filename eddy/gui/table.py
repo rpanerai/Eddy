@@ -332,7 +332,7 @@ class TableView(QTreeView):
         rows = self.selectionModel().selectedRows()
         data = self.model().mimeData(rows)
 
-        label = QLabel(str(len(rows)) + " items" if len(rows) > 1 else "1 item")
+        label = QLabel(f"{len(rows)} items" if len(rows) > 1 else "1 item")
         # Use QPalette.ColorRole?
         label.setStyleSheet(
             "font-weight: bold; color : white; background-color : black; border: 1px solid grey"
@@ -421,7 +421,7 @@ class TableView(QTreeView):
         if len(rows) > 1:
             action_delete = menu.addAction(
                 QIcon(icons.DELETE),
-                "Remove " + str(len(rows)) + " items"
+                f"Remove {len(rows)} items"
             )
             action_delete.triggered.connect(partial(self.model().DeleteRows, rows))
             return menu
@@ -465,9 +465,9 @@ class TableView(QTreeView):
             action_arxiv_page.setEnabled(False)
             action_arxiv_pdf.setEnabled(False)
         else:
-            arxiv_url = "https://arxiv.org/abs/" + arxiv_id
+            arxiv_url = f"https://arxiv.org/abs/{arxiv_id}"
             action_arxiv_page.triggered.connect(partial(OpenWebURL, arxiv_url))
-            pdf_url = "https://arxiv.org/pdf/" + arxiv_id + ".pdf"
+            pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
             action_arxiv_pdf.triggered.connect(partial(OpenOnlineDocument, pdf_url))
 
         inspire_id = self.model().GetInspireId(row)
@@ -478,20 +478,20 @@ class TableView(QTreeView):
         else:
             inspire_id = str(inspire_id)
 
-            inspire_url = "https://labs.inspirehep.net/literature/" + inspire_id
+            inspire_url = f"https://labs.inspirehep.net/literature/{inspire_id}"
             action_inspire_page.triggered.connect(partial(OpenWebURL, inspire_url))
 
-            ref_search = INSPIRE_SOURCE.CreateSearch("citedby:recid:" + inspire_id)
+            ref_search = INSPIRE_SOURCE.CreateSearch(f"citedby:recid:{inspire_id}")
             action_references.triggered.connect(partial(self.NewTabRequested.emit, ref_search))
 
-            cit_search = INSPIRE_SOURCE.CreateSearch("refersto:recid:" + inspire_id)
+            cit_search = INSPIRE_SOURCE.CreateSearch(f"refersto:recid:{inspire_id}")
             action_citations.triggered.connect(partial(self.NewTabRequested.emit, cit_search))
 
         dois = self.model().GetDOIs(row)
         if dois == []:
             action_doi_link.setEnabled(False)
         else:
-            doi_urls = ("https://doi.org/" + s for s in dois)
+            doi_urls = (f"https://doi.org/{s}" for s in dois)
             for u in doi_urls:
                 action_doi_link.triggered.connect(partial(OpenWebURL, u))
 

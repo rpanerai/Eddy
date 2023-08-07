@@ -38,7 +38,7 @@ class LocalSource:
             i = 1
             while new_path.exists():
                 i = i + 1
-                new_path = files_dir / (path.stem + "(" + str(i) + ")" + path.suffix)
+                new_path = files_dir / f"{path.stem}({i}){path.suffix}"
             shutil.copy2(path, new_path)
             if i > 1:
                 renamings[path.name] = new_path.name
@@ -96,9 +96,9 @@ class LocalSource:
         missing = files_needed - files_present
 
         dir_ = self.database.file.parent
-        with open(dir_ / (self.name + "_orphans.txt"), "w") as f:
+        with open(dir_ / f"{self.name}_orphans.txt", "w") as f:
             for s in orphans:
                 f.write(f"{s}\n")
-        with open(dir_ / (self.name + "_missing.txt"), "w") as f:
+        with open(dir_ / f"{self.name}_missing.txt", "w") as f:
             for s in missing:
                 f.write(f"{s}\n")

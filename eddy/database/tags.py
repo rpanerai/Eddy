@@ -21,7 +21,7 @@ class TagsTable(Table):
         super().__init__(database, name, drop_on_del, parent)
 
     def AddTag(self, name, parent=0):
-        query = "INSERT INTO " + self._name + " (name, parent) VALUES (?,?)"
+        query = f"INSERT INTO {self._name} (name, parent) VALUES (?,?)"
 
         cursor = self._connection.cursor()
         cursor.execute(query, (name, parent))
@@ -32,16 +32,16 @@ class TagsTable(Table):
         keys = ["id", "name"]
         if recursive:
             query = (
-                "WITH RECURSIVE cte_" + self._name + " (id, name, parent) AS ( "
-                "SELECT t.id, t.name, t.parent FROM " + self._name + " t WHERE t.parent = ? "
-                "UNION ALL "
-                "SELECT t.id, t.name, t.parent FROM " + self._name + " t "
-                "JOIN cte_" + self._name + " c ON c.id = t.parent "
-                ") "
-                "SELECT " + ", ".join(keys) + " FROM cte_" + self._name
+                f"WITH RECURSIVE cte_{self._name} (id, name, parent) AS ( "
+                f"SELECT t.id, t.name, t.parent FROM {self._name} t WHERE t.parent = ? "
+                f"UNION ALL "
+                f"SELECT t.id, t.name, t.parent FROM {self._name} t "
+                f"JOIN cte_{self._name} c ON c.id = t.parent "
+                f") "
+                f"SELECT {', '.join(keys)} FROM cte_{self._name}"
             )
         else:
-            query = "SELECT " + ", ".join(keys) + " FROM " + self._name + " WHERE parent = ?"
+            query = f"SELECT {', '.join(keys)} FROM {self._name} WHERE parent = ?"
 
         cursor = self._connection.cursor()
         cursor.execute(query, (parent,))

@@ -26,7 +26,7 @@ class TabContent(QWidget):
     def __init__(self, index, source_model, memory_database, parent=None):
         super().__init__(parent)
 
-        self._database_table = ItemsTable(memory_database, "tab" + str(index), drop_on_del=True)
+        self._database_table = ItemsTable(memory_database, f"tab{index}", drop_on_del=True)
         self._database_table.Clear()
 
         self._last_search = None
@@ -131,7 +131,7 @@ class TabContent(QWidget):
             self._splitter.table_view.SetShowCitations(False)
 
         self._active_source = source
-        title = source.name + (": " + tags[0].name if tags != [] else "")
+        title = f"{source.name}: {tags[0].name}" if tags != [] else source.name
         self.TitleRequested.emit(icons.DATABASE, title)
         self._filter_bar.clear()
         self._search_status_bar.text.hide()
@@ -162,7 +162,7 @@ class TabContent(QWidget):
         self._HandleFetchingEnded("Fetching stopped")
 
     def _HandleFetchingError(self, error):
-        self._HandleFetchingEnded("Fetching error: " + error)
+        self._HandleFetchingEnded(f"Fetching error: {error}")
 
     def _HandleFetchingEnded(self, message):
         self._search_bar.SetStopEnabled(False)
@@ -170,15 +170,18 @@ class TabContent(QWidget):
         self._search_status_bar.text.setText(message)
 
     def _HandleStatusUpdated(self, total, selected_ids):
-        message = (
-            str(total) + " item" + ("" if total == 1 else "s")
-            + (", " + str(len(selected_ids)) + " selected" if total > 0 else "")
-        )
+        match total:
+            case 0:
+                message = f"0 items"
+            case 1:
+                message = f"1 item, {len(selected_ids)} selected"
+            case _:
+                message = f"{total} items, {len(selected_ids)} selected"
 
         if selected_ids != []:
             if isinstance(self._active_source, WebSource) and self._last_search.source.has_cites:
                 citations = self._database_table.GetTotalCitations(selected_ids)
-                message = message + " (" + str(citations) + " citations among selected)"
+                message = f"{message} ({citations} citations among selected)"
 
         self._status_bar.showMessage(message)
 

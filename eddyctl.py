@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
     if args.new:
         if args.new.exists():
-            print(sys.argv[0] + ": Cannot create database file ‘" + str(args.new) + "’: File exists")
+            print(f"{sys.argv[0]}: Cannot create database file ‘{args.new}’: File exists")
         else:
             database = Database(args.new)
             ItemsTable(database).Clear()

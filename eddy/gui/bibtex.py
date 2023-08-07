@@ -99,7 +99,7 @@ class BibTeXWidget(QWidget):
         self._dowload_doi.setEnabled(has_doi)
 
     def _FetchINSPIRE(self):
-        self._fetcher.Fetch(InspireBibTeXPlugin, "recid:" + str(self._inspire_id))
+        self._fetcher.Fetch(InspireBibTeXPlugin, f"recid:{self._inspire_id}")
 
     def _FetchDOI(self):
         self._fetcher.Fetch(DOIBibTeXPlugin, self._doi)

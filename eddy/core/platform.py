@@ -37,16 +37,16 @@ def OpenInFolder(path):
         return
     if platform == "mac":
         args = [
-            "-e", "tell application \"Finder\"",
-            "-e", "activate",
-            "-e", "select POSIX file \"" + str(path) + "\"",
-            "-e", "end tell",
-            "-e", "return"
+            "-e", f"tell application \"Finder\"",
+            "-e", f"activate",
+            "-e", f"select POSIX file \"{path}\"",
+            "-e", f"end tell",
+            "-e", f"return"
         ]
         QProcess.execute('/usr/bin/osascript', args)
         return
     if platform == "linux" and WhichLinuxDesktop() == "kde" and IsInstalled("dolphin"):
-        os.system("dolphin --select '" + str(path) + "' &")
+        os.system(f"dolphin --select '{path}' &")
         return
     dir_ = path.parent
     QDesktopServices.openUrl(QUrl.fromLocalFile(str(dir_)))
@@ -59,10 +59,10 @@ def OpenOnlineDocument(url):
         command = "xdg-mime query default application/pdf".split(" ")
         stdout = subprocess.run(command, stdout=subprocess.PIPE).stdout.decode("UTF-8")
         if "evince" in stdout:
-            os.system("evince " + url + " &")
+            os.system(f"evince {url} &")
             return
         if "okular" in stdout:
-            os.system("okular " + url + " &")
+            os.system(f"okular {url} &")
             return
     QDesktopServices.openUrl(QUrl(url))
 

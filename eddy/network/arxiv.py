@@ -38,11 +38,11 @@ class ArXivPlugin():
     @staticmethod
     def _CreateRequest(status):
         url = (
-            "https://export.arxiv.org/api/query?"
-            + "search_query=" + urllib.parse.quote(status.search_string)
-            + "&start=" + str(status.last_n)
-            + "&max_results=" + str(ArXivPlugin.BATCH_SIZE)
-            + "&sortBy=submittedDate&sortOrder=descending"
+            f"https://export.arxiv.org/api/query?"
+            f"search_query={urllib.parse.quote(status.search_string)}"
+            f"&start={status.last_n}"
+            f"&max_results={ArXivPlugin.BATCH_SIZE}"
+            f"&sortBy=submittedDate&sortOrder=descending"
         )
         request = QNetworkRequest(QUrl(url))
 
@@ -138,17 +138,17 @@ class ArXivPlugin_New(ArXivPlugin):
             if l is None:
                 break
 
-        url = "https://export.arxiv.org/rss/" + c
+        url = f"https://export.arxiv.org/rss/{c}"
         request = QNetworkRequest(QUrl(url))
         return request
 
     @staticmethod
     def _CreateRequest(status):
         url = (
-            "https://export.arxiv.org/api/query?"
-            + "id_list=" + urllib.parse.quote(status.search_string)
-            + "&start=" + str(status.last_n)
-            + "&max_results=" + str(ArXivPlugin.BATCH_SIZE)
+            f"https://export.arxiv.org/api/query?"
+            f"id_list={urllib.parse.quote(status.search_string)}"
+            f"&start={status.last_n}"
+            f"&max_results={ArXivPlugin.BATCH_SIZE}"
         )
         request = QNetworkRequest(QUrl(url))
         return request
