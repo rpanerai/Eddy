@@ -6,7 +6,7 @@ from PySide2.QtWidgets import QFileIconProvider
 
 ICONS_FOLDER = Path(__file__).resolve().parent
 
-ARXIV = str(ICONS_FOLDER / "arxiv.ico")
+ARXIV = str(ICONS_FOLDER / "arxiv.png")
 DOI = str(ICONS_FOLDER / "doi.ico")
 INSPIRE = str(ICONS_FOLDER / "inspire.ico")
 
