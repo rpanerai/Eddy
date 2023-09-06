@@ -36,13 +36,13 @@ class WebSearch:
 INSPIRE_SOURCE = WebSource("INSPIRE", InspirePlugin, icons.INSPIRE, has_cites=True)
 ARXIV_SOURCE = WebSource("arXiv Search", ArXivPlugin, icons.ARXIV)
 ARXIV_NEW_SOURCE = WebSource("arXiv New", ArXivPlugin_New, icons.ARXIV,
-    title_gen=lambda x: "new: " + x)
+    title_gen=lambda x: f"new: {x}")
 
 
 def AddACCap(query, cap):
     if re.search(r"(^|\s)(ac|authorcount)(\W|$)", query):
         return query
-    return query + " and " + cap
+    return f"{query} and {cap}"
 
 
 WEB_SOURCES = [
@@ -60,9 +60,9 @@ CHILD_SOURCES = {
     "arXiv Search": [],
     "arXiv New": [
         WebSource("+ Cross-Lists", ArXivPlugin_NewWithCrossLists, icons.ARXIV,
-            title_gen=lambda x: "new: " + x),
+            title_gen=lambda x: f"new: {x}"),
         WebSource("All", ArXivPlugin_NewAll, icons.ARXIV,
-            title_gen=lambda x: "new: " + x)
+            title_gen=lambda x: f"new: {x}")
     ]
 }
 
