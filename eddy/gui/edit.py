@@ -14,7 +14,7 @@ from eddy.icons import icons
 from eddy.core.platform import OpenInFolder, OpenLocalDocument
 
 
-class ItemWidget(QWidget):
+class EditWidget(QWidget):
     ItemUpdated = Signal()
 
     _KEYS = (
@@ -57,7 +57,7 @@ class ItemWidget(QWidget):
     }
 
     _FORMAT_FUNCTIONS = {
-        "type": lambda x: ItemWidget._FORMAT_TYPE.get(x, ""),
+        "type": lambda x: EditWidget._FORMAT_TYPE.get(x, ""),
         "authors": "\n".join,
         "editors": "\n".join,
         "isbns": "\n".join,
@@ -109,7 +109,7 @@ class ItemWidget(QWidget):
         self._urls = LineSplitTextEdit(min_height)
         self._files = FileList()
 
-        for (k, v) in ItemWidget._FORMAT_TYPE.items():
+        for (k, v) in EditWidget._FORMAT_TYPE.items():
             self._type.addItem(v, k)
         # self._type.currentIndexChanged[int].connect(self._RefreshTypeFields)
 
@@ -247,7 +247,7 @@ class ItemWidget(QWidget):
         authors = []
         authors_bais = []
         for a in authors_raw:
-            (n, b) = ItemWidget._ParseAuthor(a)
+            (n, b) = EditWidget._ParseAuthor(a)
             authors.append(n)
             authors_bais.append(b)
         data["authors"] = authors
@@ -257,7 +257,7 @@ class ItemWidget(QWidget):
         editors = []
         editors_bais = []
         for e in editors_raw:
-            (n, b) = ItemWidget._ParseAuthor(e)
+            (n, b) = EditWidget._ParseAuthor(e)
             editors.append(n)
             editors_bais.append(b)
         data["editors"] = editors
@@ -265,7 +265,7 @@ class ItemWidget(QWidget):
 
         if data["date"] is not None:
             try:
-                data["date"] = ItemWidget._ParseDate(data["date"])
+                data["date"] = EditWidget._ParseDate(data["date"])
             except:
                 del data["date"]
 
@@ -352,6 +352,10 @@ class ItemWidget(QWidget):
         self._table = database_table
         self._table.Cleared.connect(self.Clear)
 
+        # NOTE: Why do we need to receive the Cleared signal?
+        #       Shouldn't the call to DisplayItem(-1) be enough?
+        #       Is it not always guaranteed to happen?
+
         if self._source is None:
             self._files.setEnabled(False)
             self._files.SetFolder(None)
@@ -364,6 +368,9 @@ class ItemWidget(QWidget):
         self._scroll.verticalScrollBar().hide()
 
     def DisplayItem(self, id_=False):
+        # NOTE: instead of using self._updating, couldn't we just check if
+        #       self._id == id_ and skip this function when this is the case?
+
         if self._updating:
             return
 
@@ -377,7 +384,7 @@ class ItemWidget(QWidget):
             self._file_add.setEnabled(False)
             return
 
-        record = self._table.GetRow(self._id, ItemWidget._KEYS)
+        record = self._table.GetRow(self._id, EditWidget._KEYS)
         authors = []
         for (a, b) in zip(record["authors"], record["authors_bais"]):
             if b is None:
@@ -392,7 +399,7 @@ class ItemWidget(QWidget):
             else:
                 editors.append(f"{e} ({b})")
         record["editors"] = editors
-        for (k, v) in ItemWidget._FORMAT_FUNCTIONS.items():
+        for (k, v) in EditWidget._FORMAT_FUNCTIONS.items():
             record[k] = v(record[k])
 
         for (k, w) in self._fields.items():
