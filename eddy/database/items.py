@@ -122,7 +122,7 @@ class ItemsTable(Table):
             + tuple(f"% {t} %" for t in tags)
         )
 
-        cursor = self._connection.cursor()
+        cursor = self.Cursor()
         cursor.execute(query, patterns)
         data = [dict(zip(keys, t)) for t in cursor.fetchall()]
         for k in self._DECODE_FUNCTIONS:
@@ -138,7 +138,7 @@ class ItemsTable(Table):
         for i in ids:
             query = f"SELECT citations FROM {self._name} WHERE id = {i}"
 
-            cursor = self._connection.cursor()
+            cursor = self.Cursor()
             cursor.execute(query)
             count = count + int(cursor.fetchone()[0])
 

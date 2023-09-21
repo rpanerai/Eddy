@@ -23,7 +23,7 @@ class TagsTable(Table):
     def AddTag(self, name, parent=0):
         query = f"INSERT INTO {self._name} (name, parent) VALUES (?,?)"
 
-        cursor = self._connection.cursor()
+        cursor = self.Cursor()
         cursor.execute(query, (name, parent))
 
         return cursor.lastrowid
@@ -43,7 +43,7 @@ class TagsTable(Table):
         else:
             query = f"SELECT {', '.join(keys)} FROM {self._name} WHERE parent = ?"
 
-        cursor = self._connection.cursor()
+        cursor = self.Cursor()
         cursor.execute(query, (parent,))
         children = [dict(zip(keys, t)) for t in cursor.fetchall()]
         # for k in self._DECODE_FUNCTIONS:

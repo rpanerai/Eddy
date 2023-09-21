@@ -39,18 +39,24 @@ class Table(QObject):
         super().__init__(parent)
 
         self.database = database
-        self._connection = database.connection
         self._name = name
         self._drop_on_del = drop_on_del
 
     def __del__(self):
         if self._drop_on_del:
-            cursor = self._connection.cursor()
-            cursor.execute(f"DROP TABLE IF EXISTS {self._name}")
-            print(f"Dropping table '{self._name}'")
+            try:
+                cursor = self.Cursor()
+                cursor.execute(f"DROP TABLE IF EXISTS {self._name}")
+                print(f"Dropping table '{self._name}'")
+            except sqlite3.ProgrammingError:
+                # If the database connection has already been closed, we simply ignore this step.
+                pass
+
+    def Cursor(self):
+        return self.database.connection.cursor()
 
     def Clear(self):
-        cursor = self._connection.cursor()
+        cursor = self.Cursor()
         cursor.execute(f"DROP TABLE IF EXISTS {self._name}")
 
         keys = ", ".join([f"{k} {t}" for k, t in self._KEYS.items()])
@@ -71,7 +77,8 @@ class Table(QObject):
             )
             for d in data
         ]
-        cursor = self._connection.cursor()
+
+        cursor = self.Cursor()
 
         # To get a valid lastrowid, we need to call execute() rather than executemany().
         if len(values) == 1:
@@ -86,7 +93,7 @@ class Table(QObject):
         query = f"DELETE FROM {self._name} WHERE id = ?"
         ids = [(i,) for i in ids]
 
-        cursor = self._connection.cursor()
+        cursor = self.Cursor()
         cursor.executemany(query, ids)
 
         self.Updated.emit()
@@ -99,7 +106,7 @@ class Table(QObject):
 
         query = f"SELECT {', '.join(keys_)} FROM {self._name} WHERE id = {id_}"
 
-        cursor = self._connection.cursor()
+        cursor = self.Cursor()
         cursor.execute(query)
         data = dict(zip(keys_, cursor.fetchone()))
         for k in self._DECODE_FUNCTIONS:
@@ -116,7 +123,7 @@ class Table(QObject):
 
         query = f"SELECT {', '.join(keys_)} FROM {self._name}"
 
-        cursor = self._connection.cursor()
+        cursor = self.Cursor()
         cursor.execute(query)
         data = [dict(zip(keys_, t)) for t in cursor.fetchall()]
         for k in self._DECODE_FUNCTIONS:
@@ -138,7 +145,7 @@ class Table(QObject):
         values.append(id_)
         values = tuple(values)
 
-        cursor = self._connection.cursor()
+        cursor = self.Cursor()
         cursor.execute(query, values)
 
         self.Updated.emit()
