@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import shutil
 import sys
@@ -7,6 +8,8 @@ import webbrowser
 from PySide2.QtCore import QUrl, QDir, QProcess
 from PySide2.QtGui import QDesktopServices
 
+
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
 def IsInstalled(tool):
     return shutil.which(tool) is not None

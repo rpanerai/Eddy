@@ -12,6 +12,7 @@ from eddy.database.items import ItemsTable
 from eddy.core.local import LocalSource
 from eddy.core.web import WebSource, WebSearch, INSPIRE_SOURCE
 from eddy.gui.table import TableModel, TableView
+from eddy.gui.item import ItemView
 from eddy.gui.edit import EditWidget
 from eddy.gui.bibtex import BibTeXWidget
 from eddy.gui.searchfilter import SearchBar, FilterBar
@@ -49,6 +50,7 @@ class TabContent(QWidget):
 
         self._splitter = TableItemSplitter()
         self._splitter.table_view.NewTabRequested.connect(self.NewTabRequested)
+        self._splitter.item_view.NewTabRequested.connect(self.NewTabRequested)
 
         self._filter_bar = FilterBar()
         self._filter_bar.TextChanged.connect(self._splitter.table_model.Filter)
@@ -195,14 +197,19 @@ class TableItemSplitter(QSplitter):
         self.table_view = TableView()
         self.table_view.setModel(self.table_model)
 
+        property_tab = QTabWidget()
+        property_tab.setDocumentMode(True)
+        tab_background_color = property_tab.palette().color(property_tab.backgroundRole()).name()
+
+        self.item_view = ItemView(background_color=tab_background_color)
         self.edit_widget = EditWidget()
         self.bibtex_widget = BibTeXWidget()
+        self.table_view.ItemSelected.connect(self.item_view.DisplayItem)
         self.table_view.ItemSelected.connect(self.edit_widget.DisplayItem)
         self.table_view.ItemSelected.connect(self.bibtex_widget.DisplayItem)
         self.edit_widget.ItemUpdated.connect(self.table_model.Update)
 
-        property_tab = QTabWidget()
-        property_tab.setDocumentMode(True)
+        property_tab.addTab(self.item_view, "Item")
         property_tab.addTab(self.edit_widget, "Edit")
         property_tab.addTab(self.bibtex_widget, "BibTeX")
 
@@ -214,11 +221,13 @@ class TableItemSplitter(QSplitter):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def SetTable(self, table):
+        self.item_view.SetTable(table)
         self.table_model.SetTable(table)
         self.edit_widget.SetTable(table)
         self.bibtex_widget.SetTable(table)
 
     def SetLocalSource(self, source, tags):
+        self.item_view.SetLocalSource(source)
         self.table_model.SetLocalSource(source)
         self.table_model.SetTags(tags)
         self.edit_widget.SetLocalSource(source)

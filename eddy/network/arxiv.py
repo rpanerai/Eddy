@@ -7,6 +7,14 @@ from PySide2.QtNetwork import QNetworkRequest
 from eddy.network.fetcher import Callback
 
 
+def AbstractUrl(arxiv_id):
+    return f"https://arxiv.org/abs/{arxiv_id}"
+
+
+def PDFUrl(arxiv_id):
+    return f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+
+
 class ArXivPlugin():
     BATCH_SIZE = 200
 

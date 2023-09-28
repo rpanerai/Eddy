@@ -14,6 +14,7 @@ from PySide2.QtWidgets import (
 from eddy.icons import icons
 from eddy.core.web import INSPIRE_SOURCE
 from eddy.core.platform import OpenLocalDocument, OpenOnlineDocument, OpenWebURL
+from eddy.network import inspire, arxiv
 
 
 class TableModel(QAbstractItemModel):
@@ -465,9 +466,9 @@ class TableView(QTreeView):
             action_arxiv_page.setEnabled(False)
             action_arxiv_pdf.setEnabled(False)
         else:
-            arxiv_url = f"https://arxiv.org/abs/{arxiv_id}"
+            arxiv_url = arxiv.AbstractUrl(arxiv_id)
             action_arxiv_page.triggered.connect(partial(OpenWebURL, arxiv_url))
-            pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+            pdf_url = arxiv.PDFUrl(arxiv_id)
             action_arxiv_pdf.triggered.connect(partial(OpenOnlineDocument, pdf_url))
 
         inspire_id = self.model().GetInspireId(row)
@@ -478,7 +479,7 @@ class TableView(QTreeView):
         else:
             inspire_id = str(inspire_id)
 
-            inspire_url = f"https://labs.inspirehep.net/literature/{inspire_id}"
+            inspire_url = inspire.LiteratureUrl(inspire_id)
             action_inspire_page.triggered.connect(partial(OpenWebURL, inspire_url))
 
             ref_search = INSPIRE_SOURCE.CreateSearch(f"citedby:recid:{inspire_id}")

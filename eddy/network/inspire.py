@@ -6,6 +6,10 @@ from PySide2.QtNetwork import QNetworkRequest
 from eddy.network.fetcher import Callback
 
 
+def LiteratureUrl(inspire_id):
+    return f"https://labs.inspirehep.net/literature/{inspire_id}"
+
+
 class InspirePlugin:
     BATCH_SIZE = 50
 
