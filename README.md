@@ -2,11 +2,18 @@
 
 Eddy is a reference management software with a specific focus on the field of high-energy theoretical physics.
 
+With Eddy you can
+* browse the [INSPIRE](https://inspirehep.net/) and [arXiv](https://arxiv.org/) digital libraries
+* open online documents
+* maintain multiple databases of bibliographic entries
+* organize your digital collection of books, articles, notes, …
+* generate BibTeX code
+
 ## Alternatives
 
 Eddy is inspired by applications such as [Mendeley](https://www.mendeley.com/) and [Zotero](https://www.zotero.org/), but mostly by the excellent [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/) developed by [Yuji Tachikawa](https://member.ipmu.jp/yuji.tachikawa/).
 
-Despite Eddy following a somewhat different philosophy, the main reason I decided to develop it is that spires is designed to run exclusively on Apple products. If you are a MacOS user, you should probably want to use [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/).
+Despite Eddy following a somewhat different philosophy, the main reason I decided to develop it is that [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/) is designed to run exclusively on Apple products. If you are a MacOS user, you should probably want to use [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/).
 
 ## Status
 
@@ -14,7 +21,7 @@ Eddy is considered stable, but the user experience is still quite unpolished. No
 
 Although for the most part, Eddy should be fairly intuitive in its usage, proper documentation still needs to be written.
 
-Contributions in the form of bug reports, feature requests, or better, code commits are welcome.
+Contributions in the form of bug reports, feature requests, or better, code commits are welcome!
 
 ## Dependencies
 Python packages:
@@ -40,13 +47,13 @@ Eddy can be configured by editing the file `config.py`.
 
 A local database can be created with
 ```
-python eddyctl.py --new database_file
+$ eddyctl.py --new DATABASE_FILE
 ```
 Local databases should be added to `config.py` by editing the relevant Python dictionary:
 ```
 LOCAL_DATABASES = {
-    "name_1": "database_file_1",
-    "name_2": "database_file_2",
+    "Name_1": "DATABASE_FILE_1",
+    "Name_2": "DATABASE_FILE_2",
     ...
 }
 ```
