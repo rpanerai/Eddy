@@ -150,13 +150,13 @@ class ItemPage(QWebEnginePage):
             journal_button = ""
 
         if item["type"] == "B" and item["files"] != []:
-            file = item["files"][0]
-            front_cover = (
-                f'<a href="cover:"><p>{i}</p></a>'
-                if (i := ItemPage._FrontCoverHTMLImage(file)) is not None else ""
-            )
+            covers = [
+                f'<a href="file:{f}"><p>{i}</p></a>' for f in item["files"]
+                if (i := ItemPage._FrontCoverHTMLImage(f)) is not None
+            ]
+            covers = "".join(covers)
         else:
-            front_cover = ""
+            covers = ""
 
         html = f'''
             <!doctype html>
@@ -178,7 +178,7 @@ class ItemPage(QWebEnginePage):
                 <p>{" ".join(author_button)}</p>
                 <p>{journal_button}</p>
                 <p align="justify">{abstract}</p>
-                <p>{front_cover}</p>
+                <p>{covers}</p>
             </div>
             </body>
             </html>
@@ -343,9 +343,8 @@ class ItemView(QWebEngineView):
                 self._ShowArXivContextMenu(url.path())
             case "links":
                 self._ShowLinksContextMenu(url.path())
-            case "cover":
-                file = self._source.FilesDir() / self._item["files"][0]
-                OpenLocalDocument(file)
+            case "file":
+                OpenLocalDocument(url.path())
             case "files":
                 self._ShowFilesContextMenu()
             case _:
