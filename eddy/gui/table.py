@@ -197,9 +197,6 @@ class TableModel(QAbstractItemModel):
         self._CreateSortFilterMap()
         self.endResetModel()
 
-    def IsVisible(self, id_):
-        return id_ in self._model_map
-
     def ActiveTag(self):
         if self._tags == []:
             return None
