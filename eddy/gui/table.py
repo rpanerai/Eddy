@@ -18,8 +18,6 @@ from eddy.network import inspire, arxiv
 
 
 class TableModel(QAbstractItemModel):
-    SelectionRequested = Signal(list)
-
     HEADERS = (
         "Date",
         "Authors",
