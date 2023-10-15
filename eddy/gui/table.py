@@ -333,7 +333,7 @@ class TableView(QTreeView):
         label = QLabel(f"{len(rows)} items" if len(rows) > 1 else "1 item")
         # Use QPalette.ColorRole?
         label.setStyleSheet(
-            "font-weight: bold; color : white; background-color : black; border: 1px solid grey"
+            "font-weight: bold; color: white; background-color: black; border: 1px solid grey"
         )
         pixmap = label.grab()
         pixmap.rect().adjust(10, 10, 0, 0)
