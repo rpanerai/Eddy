@@ -2,6 +2,12 @@ from functools import partial
 import json
 from datetime import datetime
 
+try:
+    from pylatexenc.latex2text import LatexNodes2Text
+    HAS_PYLATEXENC = True
+except ImportError:
+    HAS_PYLATEXENC = False
+
 from PySide2.QtCore import (
     Qt, Signal, QAbstractItemModel, QItemSelection, QItemSelectionModel, QModelIndex, QMimeData,
     QByteArray
@@ -47,7 +53,7 @@ class TableData:
         self.raw_data = [[
             d["date"],
             TableData._FormatAuthors(d["authors"] + d["editors"]),
-            d["title"],
+            TableData._FormatTitle(t if (t := d["title"]) is not None else ""),
             d["citations"]
         ] for d in data]
 
@@ -80,6 +86,12 @@ class TableData:
     @staticmethod
     def _FormatAuthors(authors):
         return ", ".join([a.split(",", 1)[0] for a in authors])
+
+    @staticmethod
+    def _FormatTitle(text):
+        if HAS_PYLATEXENC:
+            return LatexNodes2Text().latex_to_text(text)
+        return text
 
 
 class TableRow:
