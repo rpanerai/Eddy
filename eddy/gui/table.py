@@ -18,6 +18,7 @@ from PySide2.QtWidgets import QAbstractItemView, QTreeView, QHeaderView, QMenu, 
 from eddy.icons import icons
 from eddy.core.web import INSPIRE_SOURCE
 from eddy.core.platform import OpenLocalDocument, OpenOnlineDocument, OpenWebURL
+from eddy.database.items import SortBy
 from eddy.network import inspire, arxiv
 
 
@@ -74,13 +75,10 @@ class TableData:
     def ids(self):
         return self._ids
 
-    def SortFilter(self, sort_key, sort_order, filter_strings, tags):
+    def SortFilter(self, sort_by, filter_strings, tags):
         if self._table is None:
             return
-
-        ids = self.table.GetTable(("id",), sort_key, sort_order, filter_strings, tags)
-        self._ids = [d["id"] for d in ids]
-
+        self._ids = [d["id"] for d in self.table.GetTable(("id",), sort_by, filter_strings, tags)]
         self._row_map = [self._ids_dict[i] for i in self._ids]
 
     @staticmethod
@@ -139,6 +137,16 @@ class TableRow:
         return self._table_data.table.GetRow(self._id, ("files",))["files"]
 
 
+class SortTreeBy(SortBy):
+    def __init__(self, key, order):
+        match order:
+            case Qt.AscendingOrder:
+                order = SortBy.ASCENDING
+            case Qt.DescendingOrder:
+                order = SortBy.DESCENDING
+        super().__init__(key, order)
+
+
 class TableModel(QAbstractItemModel):
     NewItemCreated = Signal(QModelIndex)
 
@@ -169,12 +177,9 @@ class TableModel(QAbstractItemModel):
 
         self._table_data = TableData(None)
 
-        self._sort_key = "id"
-        self._sort_order = "ASC"
-        self._sort_by = None
-
-        self._tags = []
+        self._sort_by = SortTreeBy(key="date", order=Qt.DescendingOrder)
         self._filter_strings = []
+        self._tags = []
 
     def __len__(self):
         return len(self._table_data)
@@ -222,8 +227,7 @@ class TableModel(QAbstractItemModel):
         return None
 
     def sort(self, column, order=Qt.AscendingOrder):
-        self._sort_key = TableModel._KEYS[column]
-        self._sort_order = "ASC" if order is Qt.AscendingOrder else "DESC"
+        self._sort_by = SortTreeBy(key=TableModel._KEYS[column], order=order)
 
         self.layoutAboutToBeChanged.emit()
         self._CreateSortFilterMap()
@@ -307,7 +311,7 @@ class TableModel(QAbstractItemModel):
         if self._tags != []:
             data["tags"] = [self._tags[0]]
         id_ = self._table.AddData([data])
-        index = self.IndicesFromIds((id_,))[0]
+        (index,) = self.IndicesFromIds((id_,))
         self.NewItemCreated.emit(index)
 
     def DeleteRows(self, rows):
@@ -315,12 +319,7 @@ class TableModel(QAbstractItemModel):
         self._table.Delete(ids)
 
     def _CreateSortFilterMap(self):
-        self._table_data.SortFilter(
-            self._sort_key,
-            self._sort_order,
-            self._filter_strings,
-            self._tags
-        )
+        self._table_data.SortFilter(self._sort_by, self._filter_strings, self._tags)
 
 
 class TableView(QTreeView):

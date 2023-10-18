@@ -3,6 +3,15 @@ import json
 from eddy.database.database import Table
 
 
+class SortBy():
+    ASCENDING = "ASC"
+    DESCENDING = "DESC"
+
+    def __init__(self, key, order):
+        self.key = key
+        self.order = order
+
+
 class ItemsTable(Table):
     _KEYS = {
         "id": "INTEGER PRIMARY KEY",
@@ -100,7 +109,7 @@ class ItemsTable(Table):
     def __init__(self, database, name="items", drop_on_del=False, parent=None):
         super().__init__(database, name, drop_on_del, parent)
 
-    def GetTable(self, keys, sort_key=None, sort_order="DESC", filter_strings=(), tags=()):
+    def GetTable(self, keys, sort_by=None, filter_strings=(), tags=()):
         keys = list({k for k in keys if k in self._KEYS.keys()})
 
         where_clauses = []
@@ -114,8 +123,8 @@ class ItemsTable(Table):
         query = f"SELECT {', '.join(keys)} FROM {self._name}"
         if where_string != "":
             query = f"{query} WHERE {where_string}"
-        if sort_key is not None:
-            query = f"{query} ORDER BY {sort_key} {sort_order}"
+        if sort_by is not None:
+            query = f"{query} ORDER BY {sort_by.key} {sort_by.order}"
 
         patterns = (
             tuple(f"%{f}%" for f in filter_strings)
