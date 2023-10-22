@@ -481,20 +481,18 @@ class TableView(QTreeView):
         menu.exec_(self.viewport().mapToGlobal(position))
 
     def _ContextMenu(self, rows):
-        if len(rows) == 0:
-            menu = QMenu()
-            action_new = menu.addAction(QIcon(icons.ADD), "New item")
-            action_new.triggered.connect(self._model.NewItem)
-            return menu
-
-        if len(rows) == 1:
-            menu = ItemContextMenu(*rows, self._model)
-            menu.NewTabRequested.connect(self.NewTabRequested)
-            return menu
-
-        menu = QMenu()
-        action_delete = menu.addAction(QIcon(icons.DELETE), f"Remove {len(rows)} items")
-        action_delete.triggered.connect(partial(self._model.DeleteRows, rows))
+        match (n := len(rows)):
+            case 0:
+                menu = QMenu()
+                action_new = menu.addAction(QIcon(icons.ADD), "New item")
+                action_new.triggered.connect(self._model.NewItem)
+            case 1:
+                menu = ItemContextMenu(*rows, self._model)
+                menu.NewTabRequested.connect(self.NewTabRequested)
+            case _:
+                menu = QMenu()
+                action_delete = menu.addAction(QIcon(icons.DELETE), f"Remove {n} items")
+                action_delete.triggered.connect(partial(self._model.DeleteRows, rows))
         return menu
 
     def _SetColumnVisibility(self):
