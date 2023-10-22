@@ -174,7 +174,8 @@ class TabContent(QWidget):
     def _HandleStatusUpdated(self, total, selected_ids):
         match total:
             case 0:
-                message = f"0 items"
+                self._status_bar.showMessage("0 items")
+                return
             case 1:
                 message = f"1 item, {len(selected_ids)} selected"
             case _:
