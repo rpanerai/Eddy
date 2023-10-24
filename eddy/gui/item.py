@@ -102,13 +102,9 @@ class ItemPage(QWebEnginePage):
         "T": "THESIS"
     }
 
-    def __init__(self, parent=None, background_color=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-
-        if background_color is None:
-            self._CSS_BACKGROUND = ""
-        else:
-            self._CSS_BACKGROUND = f"<style>html {{background-color: {background_color};}}</style>"
+        self.setBackgroundColor(Qt.transparent)
 
     def acceptNavigationRequest(self, url, type_, isMainFrame):
         if type_ is QWebEnginePage.NavigationType.NavigationTypeTyped:
@@ -121,7 +117,7 @@ class ItemPage(QWebEnginePage):
         return False
 
     def Clear(self):
-        self.setHtml(f"<!doctype html><html><head>{self._CSS_BACKGROUND}</head></html>")
+        self.setHtml("")
 
     def ShowPage(self, item):
         inspire_button = ItemPage._TopButton("inspire", path=item["inspire_id"])
@@ -165,7 +161,6 @@ class ItemPage(QWebEnginePage):
                 <meta charset="utf-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1">
                 {ItemPage._HEAD_KATEX}
-                {self._CSS_BACKGROUND}
                 {ItemPage._CSS_TEXT}
                 {ItemPage._CSS_BUTTON}
                 {ItemPage._CSS_COVER}
@@ -267,8 +262,10 @@ class ItemView(QWebEngineView):
         "files"
     )
 
-    def __init__(self, parent=None, background_color=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setStyleSheet("background:transparent")
 
         self._source = None
         self._table = None
@@ -277,7 +274,7 @@ class ItemView(QWebEngineView):
         self.setContextMenuPolicy(Qt.PreventContextMenu)
         # To have a custom context menu one should reimplement contextMenuEvent as below
 
-        self._page = ItemPage(background_color=background_color)
+        self._page = ItemPage()
         self._page.ButtonClicked.connect(self._HandleButtonClicked)
         self._page.Clear()
         self.setPage(self._page)

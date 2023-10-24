@@ -200,9 +200,8 @@ class TableItemSplitter(QSplitter):
 
         property_tab = QTabWidget()
         property_tab.setDocumentMode(True)
-        tab_background_color = property_tab.palette().color(property_tab.backgroundRole()).name()
 
-        self.item_view = ItemView(background_color=tab_background_color)
+        self.item_view = ItemView()
         self.edit_widget = EditWidget()
         self.bibtex_widget = BibTeXWidget()
         self.table_view.ItemSelected.connect(self.item_view.DisplayItem)
