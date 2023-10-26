@@ -9,11 +9,17 @@ With Eddy you can
 * organize your digital collection of books, articles, notes, …
 * generate BibTeX code
 
+> [!NOTE]
+>
+> Thank you to [arXiv](https://arxiv.org/) for use of its open access interoperability.
+> Eddy was not reviewed or approved by, nor does it necessarily express or reflect the policies or opinions of, [arXiv](https://arxiv.org/).
+
+
 ## Alternatives
 
 Eddy is inspired by applications such as [Mendeley](https://www.mendeley.com/) and [Zotero](https://www.zotero.org/), but mostly by the excellent [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/) developed by [Yuji Tachikawa](https://member.ipmu.jp/yuji.tachikawa/).
 
-Despite Eddy following a somewhat different philosophy, the main reason I decided to develop it is that [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/) is designed to run exclusively on Apple products. If you are a MacOS user, you should probably want to use [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/).
+Despite Eddy following a somewhat different philosophy, the main reason for its existence is that [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/) is designed to run exclusively on Apple products. If you are a MacOS user, you should probably want to use [spires.app](https://member.ipmu.jp/yuji.tachikawa/spires/).
 
 ## Status
 
@@ -28,29 +34,36 @@ Python packages:
 * **Python** 3.8+
 * **PySide2** 5.14+
 * **feedparser**
+* **pylatexenc** (optional)
 
 Others:
 * **KaTeX**
 
 ## Usage
 
-First, download the latest [KaTeX](https://github.com/KaTeX/KaTeX/releases) release and unzip it into `Eddy/extern/katex`.
+First, run
+```console
+$ python eddyctl.py katex-download
+```
+to ensure proper rendering of the LaTeX code.
 
 To launch Eddy, run
+```console
+$ python launcher.py
 ```
-python launcher.py
-```
+
+### Configuration
 
 Eddy can be configured by editing the file `config.py`.
 
 ### Local databases
 
 A local database can be created with
-```
-$ eddyctl.py --new DATABASE_FILE
+```console
+$ python eddyctl.py new DATABASE_FILE
 ```
 Local databases should be added to `config.py` by editing the relevant Python dictionary:
-```
+```python
 LOCAL_DATABASES = {
     "Name_1": "DATABASE_FILE_1",
     "Name_2": "DATABASE_FILE_2",
