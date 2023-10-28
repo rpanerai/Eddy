@@ -20,7 +20,7 @@ class Callback():
 class Fetcher(QObject):
     FetchingStarted = Signal()
     BatchProgress = Signal(int, int)
-    BatchReady = Signal(dict)
+    BatchReady = Signal(list)
     FetchingFinished = Signal()
     FetchingStopped = Signal()
     FetchingError = Signal(str)
