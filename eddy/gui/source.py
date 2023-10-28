@@ -26,6 +26,7 @@ class SourceModel(QStandardItemModel):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._ITEMS = {}
 
         root = self.invisibleRootItem()
         self.TagBeingCreated = None
@@ -45,20 +46,19 @@ class SourceModel(QStandardItemModel):
         root.setChild(0, web_search)
         root.setChild(1, local)
 
-        self.ITEMS = {}
         for (r, s) in enumerate(WEB_SOURCES):
             i = SourceModel._CreateItemFromData(s)
-            self.ITEMS[s.name] = i
+            self[s.name] = i
             web_search.setChild(r, i)
         for (p, l) in CHILD_SOURCES.items():
             for (r, s) in enumerate(l):
                 i = SourceModel._CreateItemFromData(s)
-                self.ITEMS[s.name] = i
-                self.ITEMS[p].setChild(r, i)
+                self[s.name] = i
+                self[p].setChild(r, i)
 
         for (r, (n, p)) in enumerate(LOCAL_DATABASES.items()):
             if not Path(p).is_file():
-                print("Error: Cannot find database file", p)
+                print(f"Error: Cannot find database file {p}")
                 continue
 
             s = LocalSource(n, p)
@@ -66,6 +66,12 @@ class SourceModel(QStandardItemModel):
             local.setChild(r, i)
             SourceModel._AppendTags(i)
             i.sortChildren(0, Qt.AscendingOrder)
+    
+    def __getitem__(self, name):
+        return self._ITEMS[name]
+    
+    def __setitem__(self, name, item):
+        self._ITEMS[name] = item
 
     def mimeTypes(self):
         return ["application/x-eddy"]
@@ -77,41 +83,38 @@ class SourceModel(QStandardItemModel):
         if not parent.isValid():
             return False
 
-        target = self.itemFromIndex(parent).data()
-        if isinstance(target, LocalSource):
-            # Prevent drops when origin and target databases coincide
-            origin_file = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))[0]
-            return str(target.database.file) != origin_file
-
-        if isinstance(target, Tag):
-            return True
-
-        return False
+        match target := self.itemFromIndex(parent).data():
+            case LocalSource():
+                # Prevent drops when origin and target databases coincide
+                origin_file = json.loads(str(data.data(*self.mimeTypes()), 'utf-8'))[0]
+                return str(target.database.file) != origin_file
+            case Tag():
+                return True
+            case _:
+                return False
 
     def dropMimeData(self, data, action, row, column, parent):
-        (origin_file, ids, records) = json.loads(str(data.data(self.mimeTypes()[0]), 'utf-8'))
-        target = self.itemFromIndex(parent).data()
+        (origin_file, ids, records) = json.loads(str(data.data(*self.mimeTypes()), 'utf-8'))
+        match target := self.itemFromIndex(parent).data():
+            case LocalSource():
+                return SourceModel._DropIntoSource(target, origin_file, records)
+            case Tag():
+                if str(target.source.database.file) == origin_file:
+                    target.source.AssignToTag(ids, target.id)
+                    return True
+                return SourceModel._DropIntoSource(target.source, origin_file, records, target.id)
+            case _:
+                return False
 
-        if isinstance(target, LocalSource):
-            return SourceModel._DropIntoSource(target, origin_file, records)
-
-        if isinstance(target, Tag):
-            if str(target.source.database.file) == origin_file:
-                target.source.AssignToTag(ids, target.id)
-                return True
-            return SourceModel._DropIntoSource(target.source, origin_file, records, target.id)
-
-        return False
-
-    def AddTag(self, item):
-        data = item.data()
+    def AddTag(self, parent_item):
+        data = parent_item.data()
         if isinstance(data, LocalSource):
             data = data.RootTag()
 
         tag_builder = data.ChildTagBuilder()
         tag_item = SourceModel._CreateItemFromData(tag_builder)
-        item.insertRow(0, tag_item)
-        item.setChild(0, tag_item)
+        parent_item.insertRow(0, tag_item)
+        parent_item.setChild(0, tag_item)
 
         self.TagBeingCreated = tag_item
         return tag_item
@@ -134,18 +137,19 @@ class SourceModel(QStandardItemModel):
 
     @staticmethod
     def _CreateItemFromData(data):
-        if isinstance(data, WebSource):
-            item = QStandardItem(QIcon(data.icon), data.name)
-            item.setFlags(SourceModel.WEB_SOURCE_FLAGS)
-        elif isinstance(data, LocalSource):
-            item = QStandardItem(QIcon(icons.DATABASE), data.name)
-            item.setFlags(SourceModel.LOCAL_SOURCE_FLAGS)
-        elif isinstance(data, Tag):
-            item = QStandardItem(QIcon(icons.TAG), data.name)
-            item.setFlags(SourceModel.TAG_FLAGS)
-        elif isinstance(data, TagBuilder):
-            item = QStandardItem(QIcon(icons.TAG), "")
-            item.setFlags(SourceModel.TAG_BUILDER_FLAGS)
+        match data:
+            case WebSource():
+                item = QStandardItem(QIcon(data.icon), data.name)
+                item.setFlags(SourceModel.WEB_SOURCE_FLAGS)
+            case LocalSource():
+                item = QStandardItem(QIcon(icons.DATABASE), data.name)
+                item.setFlags(SourceModel.LOCAL_SOURCE_FLAGS)
+            case Tag():
+                item = QStandardItem(QIcon(icons.TAG), data.name)
+                item.setFlags(SourceModel.TAG_FLAGS)
+            case TagBuilder():
+                item = QStandardItem(QIcon(icons.TAG), "")
+                item.setFlags(SourceModel.TAG_BUILDER_FLAGS)
 
         item.setData(data)
         return item
@@ -202,28 +206,31 @@ class SourcePanel(QTreeView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self._delegate = SourceDelegate()
-        self.setItemDelegate(self._delegate)
-
+        self.setItemDelegate(SourceDelegate())
         self.setUniformRowHeights(True)
         self.setRootIsDecorated(False)
         self.setSortingEnabled(False)
         self.setWordWrap(True)
         self.setHeaderHidden(True)
-
         self.setDragDropMode(QAbstractItemView.DropOnly)
-
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._HandleRightClickOnItem)
 
+    @property
+    def _model(self):
+        return self.model()
+    
+    @property
+    def _delegate(self):
+        return self.itemDelegate()
+
     def setModel(self, model):
-        if self.model() is not None:
-            self._delegate.EditorNoUpdate.disconnect(self.model().HandleNoUpdate)
+        if self._model is not None:
+            self._delegate.EditorNoUpdate.disconnect(self._model.HandleNoUpdate)
 
         super().setModel(model)
 
-        self._delegate.EditorNoUpdate.connect(self.model().HandleNoUpdate)
-
+        self._delegate.EditorNoUpdate.connect(self._model.HandleNoUpdate)
         self.expandAll()
 
     # def mousePressEvent(self, event):
@@ -247,7 +254,7 @@ class SourcePanel(QTreeView):
         if not index.isValid():
             return QItemSelectionModel.NoUpdate
 
-        if not self.model().itemFromIndex(index).isSelectable():
+        if not self._model.itemFromIndex(index).isSelectable():
             return QItemSelectionModel.NoUpdate
 
         return QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
@@ -259,50 +266,37 @@ class SourcePanel(QTreeView):
         if len(rows) != 1:
             return
 
-        data = self.model().itemFromIndex(rows[0]).data()
-        tags = []
-        if isinstance(data, Tag):
-            source = data.source
-            tags = [data] + data.ListChildren(recursive=True)
-        else:
-            source = data
-
-        if isinstance(source, LocalSource):
-            self.LocalSourceSelected.emit(source, tags)
-        else:
-            self.WebSourceSelected.emit(source)
+        match data := self._model.itemFromIndex(*rows).data():
+            case WebSource():
+                self.WebSourceSelected.emit(data)
+            case LocalSource():
+                self.LocalSourceSelected.emit(data, [])
+            case Tag():
+                tags = [data] + data.ListChildren(recursive=True)
+                self.LocalSourceSelected.emit(data.source, tags)
 
     def SelectSource(self, source):
-        item = self.model().ITEMS[source.name]
-        index = self.model().indexFromItem(item)
-
+        index = self._model.indexFromItem(self._model[source.name])
         selection_model = self.selectionModel()
-
-        rows = selection_model.selectedRows()
-        if not rows == []:
-            if index == rows[0]:
-                return
-
-        selection_model.select(
-            index,
-            QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
-        )
+        if selection_model.selectedRows() != [index]:
+            selection_model.select(
+                index,
+                QItemSelectionModel.ClearAndSelect | QItemSelectionModel.Rows
+            )
 
     def _HandleRightClickOnItem(self, position):
         index = self.indexAt(position)
         if not index.isValid():
             return
 
-        item = self.model().itemFromIndex(index)
-        data = item.data()
-
-        if isinstance(data, LocalSource):
-            menu = self._ContextMenuLocalSource(item)
-            menu.exec_(self.viewport().mapToGlobal(position))
-
-        if isinstance(data, Tag):
-            menu = self._ContextMenuTag(item)
-            menu.exec_(self.viewport().mapToGlobal(position))
+        item = self._model.itemFromIndex(index)
+        match item.data():
+            case LocalSource():
+                menu = self._ContextMenuLocalSource(item)
+                menu.exec_(self.viewport().mapToGlobal(position))
+            case Tag():
+                menu = self._ContextMenuTag(item)
+                menu.exec_(self.viewport().mapToGlobal(position))
 
     def _ContextMenuLocalSource(self, item):
         menu = QMenu()
@@ -313,12 +307,10 @@ class SourcePanel(QTreeView):
         action_check_files = menu.addAction(
             QIcon(icons.FILE_CHECK), "Find missing and orphan files…")
 
-        path = item.data().database.file.parent
-        action_open.triggered.connect(partial(OpenFolder, path))
-
+        source = item.data()
         action_new_tag.triggered.connect(partial(self._AddTag, item))
-
-        action_check_files.triggered.connect(item.data().CheckFiles)
+        action_open.triggered.connect(partial(OpenFolder, source.database.file.parent))
+        action_check_files.triggered.connect(source.CheckFiles)
 
         return menu
 
@@ -329,15 +321,14 @@ class SourcePanel(QTreeView):
         action_remove_tag = menu.addAction(QIcon(icons.DELETE), "Remove Tag")
 
         action_new_tag.triggered.connect(partial(self._AddTag, item))
-        action_remove_tag.triggered.connect(partial(self.model().RemoveTag, item))
+        action_remove_tag.triggered.connect(partial(self._model.RemoveTag, item))
 
         return menu
 
-    def _AddTag(self, item):
-        tag_item = self.model().AddTag(item)
-
-        self.setExpanded(self.model().indexFromItem(item), True)
-        self.edit(self.model().indexFromItem(tag_item))
+    def _AddTag(self, parent_item):
+        self.setExpanded(self._model.indexFromItem(parent_item), True)
+        tag_item = self._model.AddTag(parent_item)
+        self.edit(self._model.indexFromItem(tag_item))
 
 
 class SourceDelegate(QStyledItemDelegate):
