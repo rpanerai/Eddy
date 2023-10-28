@@ -1,6 +1,6 @@
 # Eddy
 
-Eddy is a reference management software with a specific focus on the field of high-energy theoretical physics.
+Eddy is a reference management software with a specific focus on the field of theoretical high-energy physics.
 
 With Eddy you can
 * browse the [INSPIRE](https://inspirehep.net/) and [arXiv](https://arxiv.org/) digital libraries
@@ -10,7 +10,6 @@ With Eddy you can
 * generate BibTeX code
 
 > [!NOTE]
->
 > Thank you to [arXiv](https://arxiv.org/) for use of its open access interoperability.
 > Eddy was not reviewed or approved by, nor does it necessarily express or reflect the policies or opinions of, [arXiv](https://arxiv.org/).
 
@@ -23,9 +22,9 @@ Despite Eddy following a somewhat different philosophy, the main reason for its 
 
 ## Status
 
-Eddy is considered stable, but the user experience is still quite unpolished. Not all planned features have been yet implemented, and the database format might change in the future.
+Eddy is considered stable, but still quite unpolished in terms of user experience. Not all planned features have been yet implemented, and the database format might change in the future.
 
-Although for the most part, Eddy should be fairly intuitive in its usage, proper documentation still needs to be written.
+Although for the most part, Eddy is fairly intuitive in its usage, proper documentation still needs to be written.
 
 Contributions in the form of bug reports, feature requests, or better, code commits are welcome!
 
